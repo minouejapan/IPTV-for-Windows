@@ -64,9 +64,6 @@
     </RunParams>
     <RequiredPackages>
       <Item>
-        <PackageName Value="mycompo"/>
-      </Item>
-      <Item>
         <PackageName Value="UWMPVPlayer"/>
       </Item>
       <Item>
