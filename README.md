@@ -1,4 +1,4 @@
-###lazIPTVについて
+### lazIPTVについて
 
 Windows版のIPTVを作ってみました。
 Lazarusで作成したので安直にlazIPTVと名付けました。
@@ -25,5 +25,5 @@ https://github.com/zhongfly/mpv-winbuild/releases
 ください。
 
 
-###ライセンス
+### ライセンス
 MIT
