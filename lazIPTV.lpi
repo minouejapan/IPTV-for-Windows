@@ -17,8 +17,9 @@
     <VersionInfo>
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="1"/>
+      <MinorVersionNr Value="1"/>
       <Language Value="0411"/>
-      <StringTable Comments="フリーソフトです" FileDescription="IPTV fr Windows" InternalName="lazIPTV" LegalCopyright="INOUE, masahiro" LegalTrademarks="M&amp;I Sofy" OriginalFilename="lazIPTV.exe" ProductName="WinIPTV" ProductVersion="1.0"/>
+      <StringTable Comments="フリーソフトです" FileDescription="IPTV fr Windows" InternalName="lazIPTV" LegalCopyright="INOUE, masahiro" LegalTrademarks="M&amp;I Sofy" OriginalFilename="lazIPTV.exe" ProductName="WinIPTV" ProductVersion="1.1"/>
     </VersionInfo>
     <BuildModes>
       <Item Name="Debug" Default="True"/>
@@ -79,6 +80,13 @@
         <Filename Value="mainunit.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="MainForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit>
+      <Unit>
+        <Filename Value="geditunit.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="GrpEdit"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit>

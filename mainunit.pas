@@ -13,7 +13,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  Buttons, MPVPlayer, LCLType, ComCtrls, IniFiles, Windows, ActiveX, ShlObj;
+  Buttons, MPVPlayer, LCLType, ComCtrls, IniFiles, Windows, ActiveX, ShlObj, Types;
 
 type
 
@@ -23,13 +23,13 @@ type
     CloseBtn: TSpeedButton;
     CateList: TListBox;
     ChList: TListBox;
+    GrpSelect: TComboBox;
     Image1: TImage;
     Label1: TLabel;
     URLLabel: TLabel;
     VolValue: TLabel;
     MPV: TMPVPlayer;
     MenuPanel: TPanel;
-    OD: TOpenDialog;
     Panel1: TPanel;
     Panel2: TPanel;
     ListOpenBtn: TSpeedButton;
@@ -40,12 +40,16 @@ type
     procedure ChListDrawItem(Control: TWinControl; Index: Integer;
       ARect: TRect; State: TOwnerDrawState);
     procedure ChListSelectionChange(Sender: TObject; User: boolean);
+    procedure FormMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+    procedure GrpSelectChange(Sender: TObject);
+    procedure GrpSelectDrawItem(Control: TWinControl; Index: Integer;
+      ARect: TRect; State: TOwnerDrawState);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormKeyPress(Sender: TObject; var Key: char);
-    procedure FormMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
     procedure FormResize(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure GrpSelectSelect(Sender: TObject);
     procedure MPVDblClick(Sender: TObject);
     procedure CloseBtnClick(Sender: TObject);
     procedure ListOpenBtnClick(Sender: TObject);
@@ -57,8 +61,10 @@ type
     M3uFile: string;
     TVChList: array of string;  // グループ名,CH名#9URL,CH名|URL,CH名 URL,....
     ChURL: array of string;     // CH名に対応したストリーム再生URL
+    GrpList: array of string;
     Ini: TIniFile;
     procedure LoadCHList(FileName: string);
+    function GetGroupList: string;
   public
 
   end;
@@ -67,6 +73,9 @@ var
   MainForm: TMainForm;
 
 implementation
+
+uses
+  GEditUnit;
 
 {$R *.lfm}
 
@@ -107,7 +116,7 @@ begin
           end;
           s := StringReplace(s, '"', '', [rfReplaceAll]);
           if Pos('group-title=', s) = 0 then  // カテゴリーがない場合は空白カテゴリを挿入する
-            s := s + ' group-title=　　';
+            s := s + ' group-title=なし';
           // ,の後ろにあるチャンネル名を分離する
           TVid := '';
           ld.CommaText := s;
@@ -173,6 +182,8 @@ begin
       ld.CommaText := TVChList[i];
       CateList.Items.Add(ld.Strings[0]);
     end;
+    if CateList.Count > 0 then
+      CateList.ItemIndex := 0;
   finally
     ld.Free;
     ls.Free;
@@ -183,6 +194,8 @@ end;
 procedure TMainForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
   Ini.WriteInteger('Options', 'Volume', VolBar.Position);
+  if GrpSelect.ItemIndex > -1 then
+    Ini.WriteInteger('Options', 'GroupIndex', GrpSelect.ItemIndex);
   MPV.Stop;
   Ini.Free;
 end;
@@ -204,6 +217,29 @@ begin
     MPV.Play(url);
     MPV.SetAudioVolume(VolBar.Position);
     VolValue.Caption :=IntToStr(MPV.GetAudioVolume);
+  end;
+end;
+
+procedure TMainForm.GrpSelectChange(Sender: TObject);
+begin
+
+end;
+
+procedure TMainForm.GrpSelectDrawItem(Control: TWinControl; Index: Integer;
+  ARect: TRect; State: TOwnerDrawState);
+var
+  s: string;
+begin
+  with GrpSelect do
+  begin
+    s := items[index];
+    if odSelected in State then
+      Canvas.Brush.Color := $F28909
+    else
+      Canvas.Brush.color := $333333;
+    Canvas.FillRect(ARect);
+    Canvas.font.Color := clWhite;
+    Canvas.TextOut(ARect.Left + 4, ARect.top + 2, S);
   end;
 end;
 
@@ -257,7 +293,7 @@ begin
     if odSelected in State then
       Canvas.Brush.Color := $F28909
     else
-      Canvas.Brush.color := $333333;
+      Canvas.Brush.color := $282828;
     Canvas.FillRect(ARect);
     Canvas.font.Color := clWhite;
     Canvas.TextOut(ARect.Left + 4, ARect.top + 2, S);
@@ -276,7 +312,7 @@ begin
     if odSelected in State then
       Canvas.Brush.Color := $F28909
     else
-      Canvas.Brush.color := $333333;
+      Canvas.Brush.color := $282828;
     Canvas.FillRect(ARect);
     Canvas.font.Color := clWhite;
     Canvas.TextOut(ARect.Left + 4, ARect.top + 2, S);
@@ -314,6 +350,50 @@ begin
   Result := S + '\' + ChangeFileExt(ExtractFileName(Application.ExeName),'.ini');
 end;
 
+function TMainForm.GetGroupList: string;
+var
+  s1, s2: TStringList;
+  gf: string;
+  i: integer;
+begin
+  Result := '';
+  // 読み込みグループ選択ComboBoxを有効にする
+  gf := ExtractFilePath(Application.ExeName) + 'GRPLIST.TXT';
+  if FileExists(gf) then
+  begin
+    s1 := TStringList.Create;
+    s2 := TStringList.Create;
+    s2.Delimiter := ',';
+    s2.StrictDelimiter := True;
+    try
+      s1.LoadFromFile(gf, TEncoding.UTF8);
+      if s1.Count > 0 then
+      begin
+        SetLength(GrpList, s1.Count);
+        GrpSelect.Visible := True;
+        GrpSelect.Items.Clear;
+        for i := 0 to s1.Count - 1 do
+        begin
+          if Pos(',', s1.Strings[i]) = 0 then
+            Continue;
+          s2.CommaText := s1.Strings[i];
+          GrpSelect.Items.Add(s2.Strings[0]);
+          GrpList[i] := s2.Strings[1];
+        end;
+        i := Ini.ReadInteger('Options', 'GroupIndex', 0);
+        if GrpSelect.Items.Count >= i then
+          GrpSelect.ItemIndex := i
+        else
+          GrpSelect.ItemIndex := 0;
+        Result := GrpList[GrpSelect.ItemIndex]
+      end;
+    finally
+      s1.Free;
+      s2.Free;
+    end;
+  end;
+end;
+
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
   // libmpv-2.dllがなければ警告を表示して終了する
@@ -330,10 +410,13 @@ begin
 
   // Iniファイルからプレイリストファイルを読み込む
   Ini := TIniFile.Create(GetIniFileName);
-  M3uFile := Ini.ReadString('Options', 'm3ufile', '');
   VolBar.Position := Ini.ReadInteger('Options', 'Volume', 100);
+  // lazIPTVと同じフォルダ内にGRPLIST.TXTがあればグループリストとして
   // プレイリストが登録されていれば読み込む
-  if (M3uFile <> '') and FileExists(m3ufile) then
+  M3uFile := GetGroupList;
+  if M3uFile = '' then
+    M3uFile := '';//Ini.ReadString('Options', 'm3ufile', '');
+  if (M3uFile <> '') and FileExists(M3uFile) then
   begin
     LoadCHList(M3ufile);
   end else begin
@@ -374,8 +457,8 @@ procedure TMainForm.FormResize(Sender: TObject);
 begin
   inherited;
 
-  MXO := Width - 20;
-  MXC := Width - 200;
+  MXO := MainForm.Width - 40;
+  MXC := MainForm.Width - 200;
 end;
 
 // フォーム表示時にカテゴリーアイテムがあり未選択の場合は一番最初のアイテムを選択させる
@@ -387,12 +470,21 @@ begin
     CateList.ItemIndex := 0;
 end;
 
+procedure TMainForm.GrpSelectSelect(Sender: TObject);
+var
+  m3u: string;
+begin
+  m3u := GrpList[GrpSelect.ItemIndex];
+  if FileExists(m3u) then
+    LoadCHList(m3u);
+end;
+
 // 再生画面のダブルクリックでフルスクリーン・ウィンドウモードを切り替える
 procedure TMainForm.MPVDblClick(Sender: TObject);
 begin
   if not FullScrMode then
   begin
-    FullScrMode   := True;
+    FullScrMode := True;
     WindowState := wsFullScreen;
   end else begin
     FullScrMode := False;
@@ -407,14 +499,23 @@ end;
 
 // プレイリストを開いて登録する
 procedure TMainForm.ListOpenBtnClick(Sender: TObject);
+var
+  ge: TGrpEdit;
+  m3u: string;
 begin
-  with OD do
-  begin
-    if Execute then
+  ge := TGrpEdit.Create(Self);
+  try
+    if ge.ShowModal = mrOK then
     begin
-      LoadCHList(FileName);
-      Ini.WriteString('Options', 'm3ufile', FileName);
+      m3u := GetGroupList;
+      if m3u <> '' then
+      begin
+        LoadCHList(m3u);
+        CateList.ItemIndex := 0;
+      end;
     end;
+  finally
+    ge.Free;
   end;
 end;
 

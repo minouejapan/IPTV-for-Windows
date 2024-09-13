@@ -3,15 +3,17 @@ object MainForm: TMainForm
   Height = 544
   Top = 250
   Width = 961
-  BorderIcons = []
+  BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsNone
-  Caption = 'MainForm'
+  Caption = 'lazIPTV'
   ClientHeight = 544
   ClientWidth = 961
-  Color = 3355443
+  Color = 2236962
+  FormStyle = fsStayOnTop
   KeyPreview = True
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
+  OnDblClick = MPVDblClick
   OnKeyPress = FormKeyPress
   OnMouseMove = FormMouseMove
   OnResize = FormResize
@@ -51,6 +53,8 @@ object MainForm: TMainForm
     ParentBackground = False
     ParentColor = False
     TabOrder = 1
+    OnMouseMove = FormMouseMove
+    OnResize = FormResize
     object Panel2: TPanel
       Left = 0
       Height = 42
@@ -60,7 +64,9 @@ object MainForm: TMainForm
       BevelOuter = bvNone
       ClientHeight = 42
       ClientWidth = 374
+      Color = 2631720
       ParentBackground = False
+      ParentColor = False
       TabOrder = 0
       object CloseBtn: TSpeedButton
         Left = 340
@@ -77,6 +83,7 @@ object MainForm: TMainForm
         Font.Name = 'Segoe MDL2 Assets'
         Font.Pitch = fpVariable
         Font.Quality = fqDraft
+        Font.Style = [fsBold]
         OnClick = CloseBtnClick
         ShowHint = True
         ParentFont = False
@@ -85,10 +92,10 @@ object MainForm: TMainForm
       object ListOpenBtn: TSpeedButton
         Left = 292
         Height = 34
-        Hint = 'TVチャンネルリストを登録します'
+        Hint = 'TVチャンネルグループを編集します.します'
         Top = 8
         Width = 34
-        Caption = ''
+        Caption = ''
         Flat = True
         Font.CharSet = ANSI_CHARSET
         Font.Color = clWhite
@@ -243,6 +250,26 @@ object MainForm: TMainForm
         }
         Stretch = True
       end
+      object GrpSelect: TComboBox
+        Left = 43
+        Height = 32
+        Top = 5
+        Width = 208
+        Color = 3355443
+        Font.CharSet = SHIFTJIS_CHARSET
+        Font.Color = clWhite
+        Font.Height = -19
+        Font.Pitch = fpVariable
+        Font.Quality = fqDraft
+        ItemHeight = 26
+        ParentFont = False
+        Style = csOwnerDrawFixed
+        TabOrder = 0
+        Visible = False
+        OnChange = GrpSelectChange
+        OnDrawItem = GrpSelectDrawItem
+        OnSelect = GrpSelectSelect
+      end
     end
     object CateList: TListBox
       Left = 0
@@ -253,7 +280,7 @@ object MainForm: TMainForm
       BorderSpacing.CellAlignHorizontal = ccaLeftTop
       BorderSpacing.CellAlignVertical = ccaCenter
       BorderStyle = bsNone
-      Color = 3355443
+      Color = 2631720
       Font.CharSet = SHIFTJIS_CHARSET
       Font.Color = clWhite
       Font.Height = -21
@@ -273,7 +300,7 @@ object MainForm: TMainForm
       Width = 214
       Align = alClient
       BorderStyle = bsNone
-      Color = 3355443
+      Color = 2631720
       Font.CharSet = SHIFTJIS_CHARSET
       Font.Color = clWhite
       Font.Height = -21
@@ -295,7 +322,9 @@ object MainForm: TMainForm
       BevelOuter = bvNone
       ClientHeight = 48
       ClientWidth = 374
+      Color = 2631720
       ParentBackground = False
+      ParentColor = False
       TabOrder = 3
       object VolBar: TTrackBar
         Left = 16
@@ -338,11 +367,5 @@ object MainForm: TMainForm
         ShowHint = True
       end
     end
-  end
-  object OD: TOpenDialog
-    Title = 'TVチャンネルリストファイルを開く'
-    Filter = 'TVチャンネルプレイリスト|*.m3u;*.m3u8|全てのファイル|*.*'
-    Left = 470
-    Top = 247
   end
 end

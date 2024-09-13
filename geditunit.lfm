@@ -1,0 +1,213 @@
+object GrpEdit: TGrpEdit
+  Left = 327
+  Height = 399
+  Top = 250
+  Width = 793
+  BorderStyle = bsNone
+  Caption = 'GrpEdit'
+  ClientHeight = 399
+  ClientWidth = 793
+  Color = 3355443
+  KeyPreview = True
+  OnCreate = FormCreate
+  OnKeyPress = FormKeyPress
+  Position = poMainFormCenter
+  object OKBtn: TSpeedButton
+    Left = 660
+    Height = 34
+    Hint = '編集を保存して終了する'
+    Top = 352
+    Width = 86
+    Caption = ''
+    Flat = True
+    Font.CharSet = ANSI_CHARSET
+    Font.Color = clWhite
+    Font.Height = -24
+    Font.Name = 'Segoe MDL2 Assets'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    Font.Style = [fsBold]
+    OnClick = OKBtnClick
+    ShowHint = True
+    ParentFont = False
+    ParentShowHint = False
+  end
+  object CancelBtn: TSpeedButton
+    Left = 564
+    Height = 34
+    Hint = '編集を破棄して終了する'
+    Top = 354
+    Width = 86
+    Caption = ''
+    Flat = True
+    Font.CharSet = ANSI_CHARSET
+    Font.Color = clWhite
+    Font.Height = -21
+    Font.Name = 'Segoe MDL2 Assets'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    Font.Style = [fsBold]
+    OnClick = CancelBtnClick
+    ShowHint = True
+    ParentFont = False
+    ParentShowHint = False
+  end
+  object GrpEdit: TStringGrid
+    Left = 20
+    Height = 301
+    Top = 44
+    Width = 724
+    AutoEdit = False
+    Color = clSilver
+    ColCount = 2
+    ColRowDragIndicatorColor = 15894793
+    Columns = <    
+      item
+        Title.Caption = 'Title'
+        Width = 160
+      end    
+      item
+        Title.Caption = 'Title'
+        Width = 540
+      end>
+    FixedCols = 0
+    FixedRows = 0
+    Flat = True
+    Font.CharSet = SHIFTJIS_CHARSET
+    Font.Color = clBlack
+    Font.Height = -19
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    GridLineWidth = 2
+    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goEditing, goAlwaysShowEditor, goSmoothScroll]
+    ParentFont = False
+    RowCount = 1
+    ScrollBars = ssAutoVertical
+    TabOrder = 0
+    OnExit = GrpEditExit
+    OnSelectCell = GrpEditSelectCell
+  end
+  object AddBtn: TSpeedButton
+    Left = 752
+    Height = 34
+    Hint = '選択したリストの下にリストを追加する'
+    Top = 44
+    Width = 34
+    Caption = ''
+    Flat = True
+    Font.CharSet = ANSI_CHARSET
+    Font.Color = clWhite
+    Font.Height = -21
+    Font.Name = 'Segoe MDL2 Assets'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    Font.Style = [fsBold]
+    OnClick = AddBtnClick
+    ShowHint = True
+    ParentFont = False
+    ParentShowHint = False
+  end
+  object DelBtn: TSpeedButton
+    Left = 752
+    Height = 34
+    Hint = '選択したリストを削除する'
+    Top = 76
+    Width = 34
+    Caption = ''
+    Enabled = False
+    Flat = True
+    Font.CharSet = ANSI_CHARSET
+    Font.Color = clGray
+    Font.Height = -21
+    Font.Name = 'Segoe MDL2 Assets'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    Font.Style = [fsBold]
+    OnClick = DelBtnClick
+    ShowHint = True
+    ParentFont = False
+    ParentShowHint = False
+  end
+  object BrsBtn: TSpeedButton
+    Left = 752
+    Height = 34
+    Hint = 'プレイリストを参照して指定する'
+    Top = 200
+    Width = 34
+    Caption = ''
+    Enabled = False
+    Flat = True
+    Font.CharSet = ANSI_CHARSET
+    Font.Color = clGray
+    Font.Height = -21
+    Font.Name = 'Segoe MDL2 Assets'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    Font.Style = [fsBold]
+    OnClick = BrsBtnClick
+    ShowHint = True
+    ParentFont = False
+    ParentShowHint = False
+  end
+  object Label1: TLabel
+    Left = 20
+    Height = 25
+    Top = 9
+    Width = 190
+    Caption = 'TVチャンネルグループ編集'
+    Font.CharSet = SHIFTJIS_CHARSET
+    Font.Color = clWhite
+    Font.Height = -19
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentFont = False
+  end
+  object UpBtn: TSpeedButton
+    Left = 752
+    Height = 34
+    Hint = '選択したリストを上に移動する'
+    Top = 120
+    Width = 34
+    Caption = ''
+    Enabled = False
+    Flat = True
+    Font.CharSet = ANSI_CHARSET
+    Font.Color = clGray
+    Font.Height = -21
+    Font.Name = 'Segoe MDL2 Assets'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    Font.Style = [fsBold]
+    OnClick = UpBtnClick
+    ShowHint = True
+    ParentFont = False
+    ParentShowHint = False
+  end
+  object DwnBtn: TSpeedButton
+    Left = 752
+    Height = 34
+    Hint = '選択したリストを下に移動する'
+    Top = 152
+    Width = 34
+    Caption = ''
+    Enabled = False
+    Flat = True
+    Font.CharSet = ANSI_CHARSET
+    Font.Color = clGray
+    Font.Height = -21
+    Font.Name = 'Segoe MDL2 Assets'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    Font.Style = [fsBold]
+    OnClick = DwnBtnClick
+    ShowHint = True
+    ParentFont = False
+    ParentShowHint = False
+  end
+  object OD: TOpenDialog
+    Title = 'プレイリストファイルを選択する'
+    Filter = 'プレイリストファイル(*.m3u,*.m3u8)|*.m3u;*.m3u8|全てのファイル(*.*)|*.*'
+    Left = 81
+    Top = 365
+  end
+end
