@@ -2,17 +2,22 @@
 
   WinIPTV(lazIPTV)
 
+  ver1.2  2024/09/16  全画面にした際にマウスカーソルを消すようにした
+                      URLに","が含まれていると正常にチャンネル登録が出来ない不具合を修正した
+  ver1.1  2024/09/13  CHリスト(プレイリスト)を複数登録してグループを切り替え出来るようにした
+                      合わせてCHグループ編集機能を追加した
   ver1.0  2024/09/11  IPTVを自分で作ってみた
 
 *)
 unit mainunit;
 
 {$mode objfpc}{$H+}
+{$codepage utf8}
 
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
+  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls, LazUTF8,
   Buttons, MPVPlayer, LCLType, ComCtrls, IniFiles, Windows, ActiveX, ShlObj, Types;
 
 type
@@ -102,20 +107,20 @@ begin
     if fs.Count > 2 then
     begin
       s := Trim(fs.Strings[0]);
-      if Pos('#EXTM3U', s) = 1 then
+      if Utf8Pos('#EXTM3U', s) = 1 then
       begin
         i := 1;
         while i <= fs.Count -1 do
         begin
           s := Trim(fs.Strings[i]);
           // #EXTINF:ヘッダーがなければスキップする
-          if Pos('#EXTINF:', s) <> 1 then
+          if Utf8Pos('#EXTINF:', s) <> 1 then
           begin
             Inc(i);
             Continue;
           end;
-          s := StringReplace(s, '"', '', [rfReplaceAll]);
-          if Pos('group-title=', s) = 0 then  // カテゴリーがない場合は空白カテゴリを挿入する
+          s := UTF8StringReplace(s, '"', '', [rfReplaceAll]);
+          if Utf8Pos('group-title=', s) = 0 then  // カテゴリーがない場合は空白カテゴリを挿入する
             s := s + ' group-title=なし';
           // ,の後ろにあるチャンネル名を分離する
           TVid := '';
@@ -129,16 +134,22 @@ begin
             idx := -1;
             sc := Trim(ls.Strings[j]);
             // グループカテゴリーを抽出する
-            if Pos('group-title=', sc) > 0 then
+            if Utf8Pos('group-title=', sc) > 0 then
             begin
-              Delete(sc, 1, Length('group-title='));
+              Utf8Delete(sc, 1, Length('group-title='));
               TVgrp := sc;
             end;
-            // チャンネルIDが所得出来ていなければtvg-name=から抽出する
-            if (TVid = '') and (Pos('tvg-name=', sc) = 1) then
+            // チャンネルIDが取得出来ていなければtvg-name=から抽出する
+            if (TVid = '') and (Utf8Pos('tvg-name=', sc) = 1) then
             begin
-              Delete(sc, 1, Length('tvg-name='));
+              Utf8Delete(sc, 1, Length('tvg-name='));
               TVid := sc;
+            // チャンネルIDの取得が出来なかった場合は登録をスキップする
+            end;
+            if TVid = '' then
+            begin
+              Inc(i);
+              Continue;
             end;
           end;
           // URLを取得する
@@ -158,7 +169,7 @@ begin
           end else begin
             for j := 0 to l - 1 do
             begin
-              if Pos(TVgrp, TVChList[j]) = 1 then
+              if Utf8Pos(TVgrp, TVChList[j]) = 1 then
               begin
                 idx := j;
                 Break;
@@ -172,7 +183,7 @@ begin
             end;
           end;
           // CH名とURL間を'|'で連結して保存する
-          TVChList[idx] := TVChList[idx] + ',' + TVid + '|' + TVadr;
+          TVChList[idx] := TVChList[idx] + ',' + TVid + '|"' + TVadr + '"';
         end;
       end;
     end;
@@ -205,15 +216,17 @@ procedure TMainForm.ChListSelectionChange(Sender: TObject; User: boolean);
 var
   url: string;
 begin
+  inherited;
+
   if ChList.ItemIndex = -1 then
     Exit;
   // 選択したCHリストインデックスからURLを取得して再生する
   url := ChURL[ChList.ItemIndex];
   MenuOpen := False;
+  URLLabel.Caption := url;
+  URLLabel.Hint := url;
   if url <> '' then
   begin
-    URLLabel.Caption := url;
-    URLLabel.Hint := url;
     MPV.Play(url);
     MPV.SetAudioVolume(VolBar.Position);
     VolValue.Caption :=IntToStr(MPV.GetAudioVolume);
@@ -268,9 +281,9 @@ begin
     for i := 1 to grp.Count - 1 do
     begin
       ch := grp.Strings[i];
-      ch := StringReplace(ch, '|', ',', [rfReplaceAll]);
+      ch := Utf8StringReplace(ch, '|', ',', [rfReplaceAll]);
       chl.CommaText := ch;
-      if chl.Count <2 then
+      if chl.Count < 2 then
         Continue;
       ChList.Items.Add(chl.Strings[0]);     // リストにCH名を登録
       ChURL[i - 1] := chl.Strings[1];       // URLリストにURLを登録
@@ -374,7 +387,7 @@ begin
         GrpSelect.Items.Clear;
         for i := 0 to s1.Count - 1 do
         begin
-          if Pos(',', s1.Strings[i]) = 0 then
+          if Utf8Pos(',', s1.Strings[i]) = 0 then
             Continue;
           s2.CommaText := s1.Strings[i];
           GrpSelect.Items.Add(s2.Strings[0]);
@@ -446,10 +459,19 @@ procedure TMainForm.FormMouseMove(Sender: TObject; Shift: TShiftState; X,
 begin
   if MenuOpen then
     Exit;
+  //if Screen.Cursor = crNone then
+  //  Screen.Cursor := crDefault;
   if X > MXO then
+  begin
     MenuPanel.Visible := True;
+    Screen.Cursor := crDefault;
+  end;
   if X < MXC then
+  begin
     MenuPanel.Visible := False;
+    if FullScrMode then
+      Screen.Cursor := crNone;
+  end;
 end;
 
 // フォームサイズが変更されたらマウスカーソル判定位置を更新する
@@ -486,9 +508,11 @@ begin
   begin
     FullScrMode := True;
     WindowState := wsFullScreen;
+    Screen.Cursor := crNone;
   end else begin
     FullScrMode := False;
     WindowState := wsNormal;
+    Screen.Cursor := crDefault;
   end;
 end;
 

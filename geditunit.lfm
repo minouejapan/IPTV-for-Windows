@@ -12,11 +12,12 @@ object GrpEdit: TGrpEdit
   OnCreate = FormCreate
   OnKeyPress = FormKeyPress
   Position = poMainFormCenter
+  LCLVersion = '3.2.0.0'
   object OKBtn: TSpeedButton
-    Left = 660
+    Left = 700
     Height = 34
     Hint = '編集を保存して終了する'
-    Top = 352
+    Top = 356
     Width = 86
     Caption = ''
     Flat = True
@@ -33,10 +34,10 @@ object GrpEdit: TGrpEdit
     ParentShowHint = False
   end
   object CancelBtn: TSpeedButton
-    Left = 564
+    Left = 596
     Height = 34
     Hint = '編集を破棄して終了する'
-    Top = 354
+    Top = 356
     Width = 86
     Caption = ''
     Flat = True
@@ -207,7 +208,7 @@ object GrpEdit: TGrpEdit
   object OD: TOpenDialog
     Title = 'プレイリストファイルを選択する'
     Filter = 'プレイリストファイル(*.m3u,*.m3u8)|*.m3u;*.m3u8|全てのファイル(*.*)|*.*'
-    Left = 81
-    Top = 365
+    Left = 116
+    Top = 212
   end
 end
