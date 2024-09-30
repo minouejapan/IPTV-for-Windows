@@ -31,14 +31,18 @@ type
     GrpSelect: TComboBox;
     Image1: TImage;
     Label1: TLabel;
+    MuteBtn: TSpeedButton;
+    CaptPanel: TPanel;
     URLLabel: TLabel;
     VolValue: TLabel;
     MPV: TMPVPlayer;
     MenuPanel: TPanel;
     Panel1: TPanel;
-    Panel2: TPanel;
+    OpPanel: TPanel;
     ListOpenBtn: TSpeedButton;
     VolBar: TTrackBar;
+    procedure CaptPanelMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
     procedure CateListDrawItem(Control: TWinControl; Index: Integer;
       ARect: TRect; State: TOwnerDrawState);
     procedure CateListSelectionChange(Sender: TObject; User: boolean);
@@ -58,11 +62,12 @@ type
     procedure MPVDblClick(Sender: TObject);
     procedure CloseBtnClick(Sender: TObject);
     procedure ListOpenBtnClick(Sender: TObject);
+    procedure MuteBtnClick(Sender: TObject);
     procedure VolBarChange(Sender: TObject);
   private
     FullScrMode,
     MenuOpen: Boolean;
-    MXO, MXC: integer;
+    MXO, MXC, CYO: integer;
     M3uFile: string;
     TVChList: array of string;  // グループ名,CH名#9URL,CH名|URL,CH名 URL,....
     ChURL: array of string;     // CH名に対応したストリーム再生URL
@@ -204,10 +209,10 @@ end;
 
 procedure TMainForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
+  MPV.Stop;
   Ini.WriteInteger('Options', 'Volume', VolBar.Position);
   if GrpSelect.ItemIndex > -1 then
     Ini.WriteInteger('Options', 'GroupIndex', GrpSelect.ItemIndex);
-  MPV.Stop;
   Ini.Free;
 end;
 
@@ -311,6 +316,14 @@ begin
     Canvas.font.Color := clWhite;
     Canvas.TextOut(ARect.Left + 4, ARect.top + 2, S);
   end;
+end;
+
+procedure TMainForm.CaptPanelMouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  SetCapture(Self.Handle);
+  ReleaseCapture;
+  SendMessage(MainForm.Handle, WM_SYSCOMMAND, SC_MOVE or 2, 0);
 end;
 
 // チャンネルリストのカスタム描画
@@ -419,6 +432,7 @@ begin
   FullScrMode := False;
   MXO := Width - 20;
   MXC := Width - 200;
+  CYO := 24;
   MenuOpen := True;
 
   // Iniファイルからプレイリストファイルを読み込む
@@ -459,8 +473,6 @@ procedure TMainForm.FormMouseMove(Sender: TObject; Shift: TShiftState; X,
 begin
   if MenuOpen then
     Exit;
-  //if Screen.Cursor = crNone then
-  //  Screen.Cursor := crDefault;
   if X > MXO then
   begin
     MenuPanel.Visible := True;
@@ -472,6 +484,8 @@ begin
     if FullScrMode then
       Screen.Cursor := crNone;
   end;
+  if not FullScrMode then
+    CaptPanel.Visible := Y < CYO;
 end;
 
 // フォームサイズが変更されたらマウスカーソル判定位置を更新する
@@ -540,6 +554,20 @@ begin
     end;
   finally
     ge.Free;
+  end;
+end;
+
+procedure TMainForm.MuteBtnClick(Sender: TObject);
+begin
+  if MuteBtn.Caption = #$E74F then
+  begin
+    MuteBtn.Caption := #$E767;
+    MuteBtn.Hint := 'ミュートする';
+    MPV.SetAudioMute(False);
+  end else begin
+    MuteBtn.Caption := #$E74F;
+    MuteBtn.Hint := 'ミュートを解除する';
+    MPV.SetAudioMute(True);
   end;
 end;
 
