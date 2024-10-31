@@ -1,7 +1,10 @@
 (*
 
-  WinIPTV(lazIPTV)
+  lazIPTV
 
+  ver1.4  2024/10/30  ネット上からプレイリストを取得出来るようにした
+  ver1.3  2024/09/30  ミュートボタンを追加した
+                      ウィンドウ表示時に位置を移動するためのキャプションバーを追加した
   ver1.2  2024/09/16  全画面にした際にマウスカーソルを消すようにした
                       URLに","が含まれていると正常にチャンネル登録が出来ない不具合を修正した
   ver1.1  2024/09/13  CHリスト(プレイリスト)を複数登録してグループを切り替え出来るようにした
@@ -17,8 +20,9 @@ unit mainunit;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls, LazUTF8,
-  Buttons, MPVPlayer, LCLType, ComCtrls, IniFiles, Windows, ActiveX, ShlObj, Types;
+  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
+  LazUTF8, Buttons, MPVPlayer, LCLType, ComCtrls, IniFiles, Windows,
+  ActiveX, ShlObj, Types, WinINet, RegExpr;
 
 type
 
@@ -75,6 +79,8 @@ type
     Ini: TIniFile;
     procedure LoadCHList(FileName: string);
     function GetGroupList: string;
+    function GetOnlineList(aURL: string): string;
+    function LoadOnlineM3u(aURL: string): string;
   public
 
   end;
@@ -90,6 +96,109 @@ uses
 {$R *.lfm}
 
 { TMainForm }
+
+// WinINetを用いたHTMLファイルのダウンロード
+function LoadFromHTML(URLadr: string): string;
+var
+  hSession    : HINTERNET;
+  hService    : HINTERNET;
+  dwBytesRead : DWORD;
+  dwFlag      : DWORD;
+  lpBuffer    : PChar;
+  RBuff       : TMemoryStream;
+  TBuff       : TStringList;
+begin
+  Result   := '';
+  hSession := InternetOpen('WinINet', INTERNET_OPEN_TYPE_PRECONFIG, nil, nil, 0);
+
+  if Assigned(hSession) then
+  begin
+    dwFlag   := INTERNET_FLAG_RELOAD;
+    hService := InternetOpenUrl(hSession, PChar(URLadr), nil, 0, dwFlag, 0);
+    if Assigned(hService ) then
+    begin
+      RBuff := TMemoryStream.Create;
+      try
+        lpBuffer := AllocMem(65536);
+        try
+          dwBytesRead := 65535;
+          while True do
+          begin
+            if InternetReadFile(hService, lpBuffer, 65535,{SizeOf(lpBuffer),}dwBytesRead) then
+            begin
+              if dwBytesRead = 0 then
+                break;
+              RBuff.WriteBuffer(lpBuffer^, dwBytesRead);
+            end else
+              break;
+          end;
+        finally
+          FreeMem(lpBuffer);
+        end;
+        TBuff := TStringList.Create;
+        try
+          RBuff.Position := 0;
+          TBuff.LoadFromStream(RBuff, TEncoding.UTF8);
+          Result := TBuff.Text;
+        finally
+          TBuff.Free;
+        end;
+      finally
+        RBuff.Free;
+      end;
+    end;
+    InternetCloseHandle(hService);
+  end;
+end;
+
+function GetSpecialFolder(const iFolder: DWORD): String;
+var
+  IDL: PItemIDList;
+  r2: bool;
+  sf: string;
+begin
+  sf := '';
+  SHGetSpecialFolderLocation(Application.MainFormHandle, iFolder, IDL);
+  try
+    sf := StringOfChar(#0, MAX_PATH);
+    r2 := SHGetPathFromIDList(IDL, PChar(sf));
+    if (IDL <> nil) and r2 then
+    sf := Trim(sf);
+  finally
+    CoTaskMemFree(IDL);
+  end;
+  GetSpecialFolder := sf;
+end;
+
+// Iniファイルアクセス用のフォルダ・ファイル名生成
+function GetIniFileName: string;
+var
+  s: string;
+begin
+	s := GetSpecialFolder(CSIDL_APPDATA) + '\'  // \user\user\AddData\Roaming\
+       + ChangeFileExt(ExtractFileName(Application.ExeName),'');
+  if not DirectoryExists(s) then
+  	ForceDirectories(S);
+  Result := S + '\' + ChangeFileExt(ExtractFileName(Application.ExeName),'.ini');
+end;
+
+function TMainForm.GetOnlineList(aURL: string): string;
+var
+  plist: TStringList;
+begin
+  Result := '';
+  plist := TStringList.Create;
+  try
+    plist.Text := LoadFromHTML(aURL);
+    if plist.Count > 2 then
+    begin
+      Result := ExtractFilePath(GetIniFileName) + 'playlist.m3u';
+      plist.SaveToFile(Result, TEncoding.UTF8);
+    end;
+  finally
+    plist.Free;
+  end;
+end;
 
 // プレイリストファイル(*.m3u,*.m3u8)を読み込んでチャンネル情報を登録する
 procedure TMainForm.LoadCHList(FileName: string);
@@ -193,13 +302,16 @@ begin
       end;
     end;
     CateList.Items.Clear;
-    for i := 0 to Length(TVChList) - 1 do
+    if Length(TVChList) > 0 then
     begin
-      ld.CommaText := TVChList[i];
-      CateList.Items.Add(ld.Strings[0]);
+      for i := 0 to Length(TVChList) - 1 do
+      begin
+        ld.CommaText := TVChList[i];
+        CateList.Items.Add(ld.Strings[0]);
+      end;
+      if CateList.Count > 0 then
+        CateList.ItemIndex := 0;
     end;
-    if CateList.Count > 0 then
-      CateList.ItemIndex := 0;
   finally
     ld.Free;
     ls.Free;
@@ -345,37 +457,6 @@ begin
   end;
 end;
 
-function GetSpecialFolder(const iFolder: DWORD): String;
-var
-  IDL: PItemIDList;
-  r2: bool;
-  sf: string;
-begin
-  sf := '';
-  SHGetSpecialFolderLocation(Application.MainFormHandle, iFolder, IDL);
-  try
-    sf := StringOfChar(#0, MAX_PATH);
-    r2 := SHGetPathFromIDList(IDL, PChar(sf));
-    if (IDL <> nil) and r2 then
-    sf := Trim(sf);
-  finally
-    CoTaskMemFree(IDL);
-  end;
-  GetSpecialFolder := sf;
-end;
-
-// Iniファイルアクセス用のフォルダ・ファイル名生成
-function GetIniFileName: string;
-var
-  s: string;
-begin
-	s := GetSpecialFolder(CSIDL_APPDATA) + '\'  // \user\user\AddData\Roaming\
-       + ChangeFileExt(ExtractFileName(Application.ExeName),'');
-  if not DirectoryExists(s) then
-  	ForceDirectories(S);
-  Result := S + '\' + ChangeFileExt(ExtractFileName(Application.ExeName),'.ini');
-end;
-
 function TMainForm.GetGroupList: string;
 var
   s1, s2: TStringList;
@@ -441,11 +522,14 @@ begin
   // lazIPTVと同じフォルダ内にGRPLIST.TXTがあればグループリストとして
   // プレイリストが登録されていれば読み込む
   M3uFile := GetGroupList;
-  if M3uFile = '' then
-    M3uFile := '';//Ini.ReadString('Options', 'm3ufile', '');
   if (M3uFile <> '') and FileExists(M3uFile) then
   begin
     LoadCHList(M3ufile);
+  end else if Pos('https://', M3uFile) = 1 then
+  begin
+    M3ufile := LoadOnlinem3u(M3uFile);
+    if M3ufile <> '' then
+      LoadCHList(M3ufile);
   end else begin
     // 登録されているプレイリストファイルがない
     if M3uFile <> '' then
@@ -506,13 +590,71 @@ begin
     CateList.ItemIndex := 0;
 end;
 
+// ネット上からプレイリストを取得する
+function TMainForm.LoadOnlineM3u(aURL: string): string;
+var
+  fn, s: string;
+  gsrc: TStringList;
+  r: TRegExpr;
+begin
+  fn := '';
+  if UTF8Pos('https://', aURL) = 1 then
+  begin
+    if Pos('https://github.com', aURL) = 1 then   // githubからHTMLを取得してプレイリストを抽出する
+    begin
+      s := LoadFromHTML(aURL);
+      if Pos('#EXTM3U', s) > 1 then
+      begin
+        r := TRegExpr.Create;
+        try
+          r.Expression :='{"rawLines":\["#EXTM3U.*?\"],"stylingDirectives"';
+          r.InputString := s;
+          if r.Exec then
+          begin
+            s := r.Match[0];                        // マッチした部分
+            UTF8Delete(s, r.MatchLen[0] - 21, 22);  // "],"stylingDirectives"を削除
+            UTF8Delete(s, 1, 14);                   // {"rawLines":["を削除
+            s := UTF8StringReplace(s, '\r', '', [rfReplaceAll]);
+            s := UTF8StringReplace(s, '","', #13#10, [rfReplaceAll]);
+            s := UTF8StringReplace(s, '"]', '', [rfReplaceAll]);
+            s := UTF8StringReplace(s, '\"', '"', [rfReplaceAll]);
+           gsrc := TStringList.Create;
+            try
+              gsrc.Text := s;
+              fn := ExtractFilePath(GetIniFileName) + 'playlist.m3u';
+              gsrc.SaveToFile(fn, TEncoding.UTF8);
+            finally
+              gsrc.Free;
+            end;
+          end;
+        finally
+          r.Free;
+        end;
+      end;
+    end else begin  // HTMLからプレーンテキストを取得
+      fn := GetOnlineList(aURL);
+    end;
+  end;
+  // オンライン上から取得して一時保存したプレイリストファイル名を返す
+  Result := fn;
+end;
+
+// CHグループ変更処理
 procedure TMainForm.GrpSelectSelect(Sender: TObject);
 var
-  m3u: string;
+  m3u, fn: string;
 begin
   m3u := GrpList[GrpSelect.ItemIndex];
   if FileExists(m3u) then
-    LoadCHList(m3u);
+    LoadCHList(m3u)
+  else begin
+    if UTF8Pos('https://', m3u) = 1 then
+    begin
+      fn := LoadOnlinem3u(m3u);
+      if fn <> '' then
+        LoadChList(fn);
+    end;
+  end;
 end;
 
 // 再生画面のダブルクリックでフルスクリーン・ウィンドウモードを切り替える
@@ -540,17 +682,26 @@ procedure TMainForm.ListOpenBtnClick(Sender: TObject);
 var
   ge: TGrpEdit;
   m3u: string;
+  i: integer;
 begin
+  i := GrpSelect.ItemIndex;
   ge := TGrpEdit.Create(Self);
   try
     if ge.ShowModal = mrOK then
     begin
       m3u := GetGroupList;
-      if m3u <> '' then
-      begin
-        LoadCHList(m3u);
-        CateList.ItemIndex := 0;
+      if FileExists(m3u) then
+        LoadCHList(m3u)
+      else begin
+        if UTF8Pos('https://', m3u) = 1 then
+        begin
+          m3u := LoadOnlinem3u(m3u);
+          if m3u <> '' then
+            LoadChList(m3u);
+        end;
       end;
+      GrpSelect.ItemIndex := i;
+      GrpSelectSelect(nil);
     end;
   finally
     ge.Free;
