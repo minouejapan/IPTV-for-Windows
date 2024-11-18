@@ -18,7 +18,6 @@ unit vlcmainunit;
 
 {$mode objfpc}{$H+}
 {$codepage utf8}
-{$defile VLC}
 
 interface
 
@@ -517,13 +516,6 @@ end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
-  // libmpv-2.dllがなければ警告を表示して終了する
-{  if not MPV.IsLibMPVAvailable then
-  begin
-    ShowMessage('libmpv-2.dllが必要です.'#13#10'https://github.com/zhongfly/mpv-winbuild/releases');
-    Close;
-  end;
-}
   FullScrMode := False;
   MXO := Width - 20;
   MXC := Width - 200;
