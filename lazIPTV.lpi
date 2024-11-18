@@ -17,9 +17,9 @@
     <VersionInfo>
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="1"/>
-      <MinorVersionNr Value="4"/>
+      <MinorVersionNr Value="5"/>
       <Language Value="0411"/>
-      <StringTable Comments="フリーソフトです" FileDescription="IPTV fr Windows" InternalName="lazIPTV" LegalCopyright="INOUE, masahiro" LegalTrademarks="M&amp;I Sofy" OriginalFilename="lazIPTV.exe" ProductName="WinIPTV" ProductVersion="1.4"/>
+      <StringTable Comments="フリーソフトです" FileDescription="IPTV fr Windows" InternalName="lazIPTV" LegalCopyright="INOUE, masahiro" LegalTrademarks="M&amp;I Sofy" OriginalFilename="lazIPTV.exe" ProductName="WinIPTV" ProductVersion="1.5"/>
     </VersionInfo>
     <BuildModes>
       <Item Name="Debug" Default="True"/>
@@ -65,7 +65,7 @@
     </RunParams>
     <RequiredPackages>
       <Item>
-        <PackageName Value="UWMPVPlayer"/>
+        <PackageName Value="PasLibVlcPlayer"/>
       </Item>
       <Item>
         <PackageName Value="LCL"/>
@@ -77,7 +77,7 @@
         <IsPartOfProject Value="True"/>
       </Unit>
       <Unit>
-        <Filename Value="mainunit.pas"/>
+        <Filename Value="vlcmainunit.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="MainForm"/>
         <HasResources Value="True"/>
