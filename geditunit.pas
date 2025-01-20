@@ -1,19 +1,26 @@
+(*
+  プレイリストグループ編集
+*)
 unit geditunit;
 
-{$mode ObjFPC}{$H+}
-{$codepage utf8}
+{$IFDEF FPC}
+  {$MODE Delphi}
+  {$codepage utf8}
+{$ENDIF}
 
 interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, Buttons, Grids,
-  StdCtrls;
+  StdCtrls, LazUTF8;
 
 type
 
   { TGrpEdit }
 
   TGrpEdit = class(TForm)
+    EPGurl: TEdit;
+    Label2: TLabel;
     UpBtn: TSpeedButton;
     DwnBtn: TSpeedButton;
     Label1: TLabel;
@@ -150,9 +157,9 @@ end;
 
 procedure TGrpEdit.FormCreate(Sender: TObject);
 var
-  gf: string;
+  gf, s: string;
   s1, s2: TStringList;
-  i: integer;
+  i, n: integer;
 begin
   gf := ExtractFilePath(Application.ExeName) + 'GRPLIST.TXT';
   if FileExists(gf) then
@@ -166,11 +173,20 @@ begin
       if s1.Count > 0 then
       begin
         GrpEdit.RowCount := s1.Count;
+        n := 0;
         for i := 0 to s1.Count - 1 do
         begin
-          s2.CommaText := s1.Strings[i];
-          GrpEdit.Cells[0, i] := s2.Strings[0];
-          GrpEdit.Cells[1, i] := s2.Strings[1];
+          s := s1.Strings[i];
+          if UTF8Pos('$', s) = 1 then
+          begin
+            EPGurl.Text := Copy(s, 2, UTF8Length(s));
+            GrpEdit.RowCount := s1.Count - 1;
+          end else begin
+            s2.CommaText := s;
+            GrpEdit.Cells[0, n] := s2.Strings[0];
+            GrpEdit.Cells[1, n] := s2.Strings[1];
+            Inc(n);
+          end;
         end;
       end;
     finally
@@ -189,6 +205,7 @@ begin
   gf := ExtractFilePath(Application.ExeName) + 'GRPLIST.TXT';
   sl := TStringList.Create;
   try
+    sl.Add('$' + EPGurl.Text);
     for i := 0 to GrpEdit.RowCount - 1 do
       sl.Add(GrpEdit.Rows[i].CommaText);
     sl.SaveToFile(gf, TEncoding.UTF8);

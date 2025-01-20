@@ -2,6 +2,7 @@
 
   lazIPTV
 
+  ver1.6  2025/01/20  EPGファイルを読み込んで視聴中の番組情報を表示できるようにした
   ver1.5  2024/11/18  ネット上から取得したプレイリストをファイルに保存出来るようにした
                       再生ライブラリをVLCライブラリに変更した
   ver1.4  2024/10/30  ネット上からプレイリストを取得出来るようにした
@@ -16,21 +17,26 @@
 *)
 unit vlcmainunit;
 
-{$mode objfpc}{$H+}
-{$codepage utf8}
+{$IFDEF FPC}
+  {$MODE Delphi}
+  {$codepage utf8}
+{$ENDIF}
 
 interface
 
 uses
+{$IFDEF FPC}
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  LazUTF8, Buttons, LCLType, ComCtrls, Menus, IniFiles, Windows,
-  ActiveX, ShlObj, Types, WinINet, RegExpr, ClipBrd,
-  PasLibVlcPlayerUnit;
+  LazUTF8, Buttons, LCLType, ComCtrls, Menus, FpHttpClient, OpenSSLSockets,
+{$ELSE}
+  System.Classes, System.SysUtils, Vcl.Forms, Vcl.Controls, Vcl.Graphics,
+  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Buttons, Vcl.ComCtrls, Vcl.Menus, WinINet,
+  LazUTF8wrap,
+{$ENDIF}
+  IniFiles, Windows, ActiveX, ShlObj, ClipBrd, PasLibVlcPlayerUnit, RegExpr;
 
 type
-
   { TMainForm }
-
   TMainForm = class(TForm)
     CloseBtn: TSpeedButton;
     CateList: TListBox;
@@ -38,12 +44,13 @@ type
     GrpSelect: TComboBox;
     Image1: TImage;
     Label1: TLabel;
+    TVTitle: TLabel;
+    VLC: TPasLibVlcPlayer;
     PLexport: TSpeedButton;
     MnuCopy: TMenuItem;
     MuteBtn: TSpeedButton;
     CaptPanel: TPanel;
     SD: TSaveDialog;
-    VLC: TPasLibVlcPlayer;
     PopupMenu1: TPopupMenu;
     URLLabel: TLabel;
     VolValue: TLabel;
@@ -71,7 +78,8 @@ type
     procedure FormShow(Sender: TObject);
     procedure GrpSelectSelect(Sender: TObject);
     procedure MnuCopyClick(Sender: TObject);
-    procedure MPVDblClick(Sender: TObject);
+    procedure VLCClick(Sender: TObject);
+    procedure VLCDblClick(Sender: TObject);
     procedure CloseBtnClick(Sender: TObject);
     procedure ListOpenBtnClick(Sender: TObject);
     procedure MuteBtnClick(Sender: TObject);
@@ -85,7 +93,8 @@ type
     M3uFile: string;
     TVChList: array of string;  // グループ名,CH名#9URL,CH名|URL,CH名 URL,....
     ChURL: array of string;     // CH名に対応したストリーム再生URL
-    GrpList: array of string;
+    GrpList: array of string;   // グループ名
+    ChID: array of string;      // EPGデータ取得用チャンネルID
     Ini: TIniFile;
     PlainM3u: string;
     procedure LoadCHList(FileName: string);
@@ -93,7 +102,6 @@ type
     function GetOnlineList(aURL: string): string;
     function LoadOnlineM3u(aURL: string): string;
   public
-
   end;
 
 var
@@ -102,12 +110,27 @@ var
 implementation
 
 uses
-  GEditUnit;
+  GEditUnit, EPGunit, tvgunit;
+
+
 
 {$R *.lfm}
 
 { TMainForm }
 
+{$IFDEF FPC}
+// WinINetを用いたHTMLファイルのダウンロード
+function LoadFromHTML(URLadr: string): string;
+begin
+  Result := '';
+  with TFPHttpClient.Create(Nil) do
+    try
+      Result:= Get(URLadr);
+    finally
+      Free;
+    end;
+end;
+{$ELSE}
 // WinINetを用いたHTMLファイルのダウンロード
 function LoadFromHTML(URLadr: string): string;
 var
@@ -135,7 +158,7 @@ begin
           dwBytesRead := 65535;
           while True do
           begin
-            if InternetReadFile(hService, lpBuffer, 65535,{SizeOf(lpBuffer),}dwBytesRead) then
+            if InternetReadFile(hService, lpBuffer, 65535, dwBytesRead) then
             begin
               if dwBytesRead = 0 then
                 break;
@@ -161,6 +184,7 @@ begin
     InternetCloseHandle(hService);
   end;
 end;
+{$ENDIF}
 
 function GetSpecialFolder(const iFolder: DWORD): String;
 var
@@ -219,7 +243,8 @@ var
   fs, ls, ld: TStringList;
   i, j, idx, l: integer;
   s, sc,
-  TVgrp, TVid, TVadr: string;
+  TVgrp, TVid, TVadr, Tvg, Gid: string;
+  r: TRegExpr;
 begin
   SetLength(TVChList, 0);   //  CHリストをクリア
   CateList.Clear;
@@ -236,6 +261,19 @@ begin
       s := Trim(fs.Strings[0]);
       if Utf8Pos('#EXTM3U', s) = 1 then
       begin
+        r := TRegExpr.Create;
+        try
+          r.InputString := fs.Text;
+          r.Expression  := '#EXTM3U url-tvg=".*?" tvg-shift=';
+          if r.Exec then
+          begin
+            Tvg := r.Match[0];
+            Tvg := ReplaceRegExpr('" tvg-shift=', ReplaceRegExpr('#EXTM3U url-tvg="', Tvg, ''), '');
+            Tvg := ReplaceRegExpr(',.*?xml', Tvg, '');
+          end;
+        finally
+          r.Free;
+        end;
         i := 1;
         while i <= fs.Count -1 do
         begin
@@ -246,9 +284,25 @@ begin
             Inc(i);
             Continue;
           end;
-          s := UTF8StringReplace(s, '"', '', [rfReplaceAll]);
           if Utf8Pos('group-title=', s) = 0 then  // カテゴリーがない場合は空白カテゴリを挿入する
             s := s + ' group-title=なし';
+          // チャンネルIDを取得する
+          if UTF8Pos('tvg-id="', s) > 0 then
+          begin
+            r := TRegExpr.Create;
+            try
+              r.InputString := s;
+              r.Expression  := 'tvg-id=".*?"';
+              if r.Exec then
+              begin
+                Gid := r.Match[0];
+                Gid := ReplaceRegExpr('"', ReplaceRegExpr('tvg-id="', Gid, ''), '');
+              end;
+            finally
+              r.Free;
+            end;
+          end;
+          s := UTF8StringReplace(s, '"', '', [rfReplaceAll]);
           // ,の後ろにあるチャンネル名を分離する
           TVid := '';
           ld.CommaText := s;
@@ -266,7 +320,7 @@ begin
               Utf8Delete(sc, 1, Length('group-title='));
               TVgrp := sc;
             end;
-            // チャンネルIDが取得出来ていなければtvg-name=から抽出する
+             // チャンネルIDが取得出来ていなければtvg-name=から抽出する
             if (TVid = '') and (Utf8Pos('tvg-name=', sc) = 1) then
             begin
               Utf8Delete(sc, 1, Length('tvg-name='));
@@ -309,8 +363,10 @@ begin
               TVChList[idx] := TVgrp;
             end;
           end;
+          if Gid = '' then
+            Gid := 'DUMMY';
           // CH名とURL間を'|'で連結して保存する
-          TVChList[idx] := TVChList[idx] + ',' + TVid + '|"' + TVadr + '"';
+          TVChList[idx] := TVChList[idx] + ',' + TVid + '|"' + TVadr + '"|"' + Gid + '"';
         end;
       end;
     end;
@@ -334,7 +390,7 @@ end;
 
 procedure TMainForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
-  VLC.Stop(100);
+  //VLC.Stop(0);
   Ini.WriteInteger('Options', 'Volume', VolBar.Position);
   if GrpSelect.ItemIndex > -1 then
     Ini.WriteInteger('Options', 'GroupIndex', GrpSelect.ItemIndex);
@@ -344,14 +400,17 @@ end;
 // チャンネル選択・再生処理
 procedure TMainForm.ChListSelectionChange(Sender: TObject; User: boolean);
 var
-  url: string;
+  url, st, et, ttl: string;
+  tvg: TVGuide;
+  i: integer;
 begin
   inherited;
 
-  if ChList.ItemIndex = -1 then
+  i := ChList.ItemIndex;
+  if i = -1 then
     Exit;
   // 選択したCHリストインデックスからURLを取得して再生する
-  url := ChURL[ChList.ItemIndex];
+  url := ChURL[i];
   MenuOpen := False;
   URLLabel.Caption := url;
   URLLabel.Hint := url;
@@ -359,7 +418,16 @@ begin
   begin
     VLC.Play(url);
     VLC.SetAudioVolume(VolBar.Position);
-    VolValue.Caption :=IntToStr(VLC.GetAudioVolume);
+    VolValue.Caption :=IntToStr(VolBar.Position);
+    URLLabel.Caption := '番組情報を取得中...お待ちください...';
+    Application.ProcessMessages;
+    TVg := GetEPGGuide(Chid[i], Now);
+    st  := FormatDateTime('hh:nn', TVg.StartT);
+    et  := FormatDateTime('hh:nn', TVg.EndT);
+    ttl := ChList.Items[i] +  ' [' + st + ' - ' + et + '] ' +  TVg.Title;
+    TVTitle.Caption := ttl;
+    VLC.MarqueeShowText(ttl, 10, 10, clYellow, 26, 255, 5000);
+    URLLabel.Caption := url;
   end;
 end;
 
@@ -408,6 +476,7 @@ begin
     s := TVChList[CateList.ItemIndex];
     grp.CommaText := s;
     SetLength(ChURL, grp.Count - 1);
+    SetLength(ChID, grp.Count - 1);
     for i := 1 to grp.Count - 1 do
     begin
       ch := grp.Strings[i];
@@ -416,7 +485,8 @@ begin
       if chl.Count < 2 then
         Continue;
       ChList.Items.Add(chl.Strings[0]);     // リストにCH名を登録
-      ChURL[i - 1] := chl.Strings[1];       // URLリストにURLを登録
+      ChURL[i - 1]  := chl.Strings[1];      // URLリストにURLを登録
+      ChID[i - 1]   := chl.Strings[2];      // 番組情報取得用チャンネルID
     end;
   finally
     grp.Free;
@@ -443,6 +513,7 @@ begin
   end;
 end;
 
+// キャプションバーを掴んだらWindowをマウスで移動できるようにする
 procedure TMainForm.CaptPanelMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
@@ -470,11 +541,12 @@ begin
   end;
 end;
 
+// 保存されているグループリストを読み込む
 function TMainForm.GetGroupList: string;
 var
   s1, s2: TStringList;
-  gf: string;
-  i: integer;
+  gf, s: string;
+  i, n: integer;
 begin
   Result := '';
   // 読み込みグループ選択ComboBoxを有効にする
@@ -492,13 +564,21 @@ begin
         SetLength(GrpList, s1.Count);
         GrpSelect.Visible := True;
         GrpSelect.Items.Clear;
+        n := 0;
         for i := 0 to s1.Count - 1 do
         begin
-          if Utf8Pos(',', s1.Strings[i]) = 0 then
-            Continue;
-          s2.CommaText := s1.Strings[i];
-          GrpSelect.Items.Add(s2.Strings[0]);
-          GrpList[i] := s2.Strings[1];
+          s := s1.Strings[i];
+          // 先頭文字が$ならEPG URLとして読み込む
+          if UTF8Pos('$', s) = 1 then
+            EPGurl := UTF8Copy(s, 2, UTF8Length(s))
+          else begin
+            if Utf8Pos(',', s1.Strings[i]) = 0 then
+              Continue;
+            s2.CommaText := s1.Strings[i];
+            GrpSelect.Items.Add(s2.Strings[0]);
+            GrpList[n] := s2.Strings[1];
+            Inc(n);
+          end;
         end;
         i := Ini.ReadInteger('Options', 'GroupIndex', 0);
         if GrpSelect.Items.Count >= i then
@@ -526,6 +606,7 @@ begin
   // Iniファイルからプレイリストファイルを読み込む
   Ini := TIniFile.Create(GetIniFileName);
   VolBar.Position := Ini.ReadInteger('Options', 'Volume', 100);
+  VolValue.Caption:= IntToStr(VolBar.Position);
   VolBarChange(nil);
   // lazIPTVと同じフォルダ内にGRPLIST.TXTがあればグループリストとして
   // プレイリストが登録されていれば読み込む
@@ -615,7 +696,8 @@ begin
   PlainM3u := '';
   if UTF8Pos('https://', aURL) = 1 then
   begin
-    if Pos('https://github.com', aURL) = 1 then   // githubからHTMLを取得してプレイリストを抽出する
+    // URLがgithubの場合は取得したHTMLからプレイリスト部分だけを抽出する
+    if Pos('https://github.com', aURL) = 1 then
     begin
       s := LoadFromHTML(aURL);
       if Pos('#EXTM3U', s) > 1 then
@@ -685,8 +767,13 @@ begin
   ClipBoard.AsText := URLlabel.Caption;
 end;
 
+procedure TMainForm.VLCClick(Sender: TObject);
+begin
+  VLC.MarqueeShowText(TVTitle.Caption, 10, 10, clYellow, 26, 255, 5000);
+end;
+
 // 再生画面のダブルクリックでフルスクリーン・ウィンドウモードを切り替える
-procedure TMainForm.MPVDblClick(Sender: TObject);
+procedure TMainForm.VLCDblClick(Sender: TObject);
 begin
   if not FullScrMode then
   begin
@@ -761,6 +848,9 @@ begin
     FileName := GrpSelect.Text;
     if Execute then
     begin
+      if FileExists(FileName) then
+        if MessageDlg('確認', 'ファイルは既に存在します.上書きしますか?', mtWarning, [mbYes, mbNo], 0) = mrNo then
+          Exit;
       sl := TStringList.Create;
       try
         sl.Text := PlainM3u;
@@ -782,7 +872,6 @@ begin
   VLC.SetAudioVolume(VolBar.Position);
   VolValue.Caption := IntToStr(VolBar.Position);
 end;
-
 
 
 end.

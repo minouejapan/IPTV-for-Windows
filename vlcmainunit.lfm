@@ -9,25 +9,23 @@ object MainForm: TMainForm
   ClientHeight = 544
   ClientWidth = 961
   Color = 2236962
-  FormStyle = fsStayOnTop
   KeyPreview = True
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
-  OnDblClick = MPVDblClick
+  OnDblClick = VLCDblClick
   OnKeyPress = FormKeyPress
   OnMouseMove = FormMouseMove
   OnResize = FormResize
   OnShow = FormShow
   Position = poDesktopCenter
-  LCLVersion = '3.2.0.0'
   object MenuPanel: TPanel
     Left = 587
-    Height = 520
-    Top = 24
+    Height = 512
+    Top = 32
     Width = 374
     Align = alRight
     BevelOuter = bvNone
-    ClientHeight = 520
+    ClientHeight = 512
     ClientWidth = 374
     Color = 3355443
     ParentBackground = False
@@ -273,7 +271,7 @@ object MainForm: TMainForm
     end
     object CateList: TListBox
       Left = 0
-      Height = 430
+      Height = 422
       Top = 42
       Width = 160
       Align = alLeft
@@ -295,7 +293,7 @@ object MainForm: TMainForm
     end
     object ChList: TListBox
       Left = 160
-      Height = 430
+      Height = 422
       Top = 42
       Width = 214
       Align = alClient
@@ -316,7 +314,7 @@ object MainForm: TMainForm
     object Panel1: TPanel
       Left = 0
       Height = 48
-      Top = 472
+      Top = 464
       Width = 374
       Align = alBottom
       BevelOuter = bvNone
@@ -390,30 +388,64 @@ object MainForm: TMainForm
   end
   object CaptPanel: TPanel
     Left = 0
-    Height = 24
+    Height = 32
     Top = 0
     Width = 961
     Align = alTop
     BevelOuter = bvNone
-    Color = clGray
+    ClientHeight = 32
+    ClientWidth = 961
+    Color = 5907201
     ParentBackground = False
     ParentColor = False
     TabOrder = 1
     Visible = False
     OnMouseDown = CaptPanelMouseDown
+    object TVTitle: TLabel
+      Left = 12
+      Height = 25
+      Top = 4
+      Width = 918
+      Anchors = [akTop, akLeft, akRight]
+      AutoSize = False
+      Caption = 'Caption'
+      Font.CharSet = SHIFTJIS_CHARSET
+      Font.Color = clWhite
+      Font.Height = -16
+      Font.Pitch = fpVariable
+      Font.Quality = fqDraft
+      ParentFont = False
+      OnMouseDown = CaptPanelMouseDown
+    end
   end
   object VLC: TPasLibVlcPlayer
     Left = 0
-    Height = 520
-    Top = 24
+    Height = 512
+    Top = 32
     Width = 587
     Align = alClient
     BevelOuter = bvNone
+    Caption = 'VLC'
+    Font.CharSet = SHIFTJIS_CHARSET
+    Font.Color = clWhite
+    Font.Height = -21
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    Font.Style = [fsBold]
     ParentBackground = False
     ParentColor = False
+    ParentFont = False
+    ParentShowHint = False
     TabOrder = 2
-    OnDblClick = MPVDblClick
+    OnClick = VLCClick
+    OnDblClick = VLCDblClick
     OnMouseMove = FormMouseMove
+    SpuShow = False
+    OsdShow = False
+    TitleShow = True
+    TitleShowPos = plvPosTopLeft
+    TitleShowTimeOut = 5000
+    UseOverlay = True
     SnapShotFmt = 'png'
     MouseEventsHandler = mehComponent
   end
