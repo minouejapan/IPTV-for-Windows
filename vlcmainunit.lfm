@@ -1,13 +1,13 @@
 object MainForm: TMainForm
   Left = 327
-  Height = 544
+  Height = 506
   Top = 250
-  Width = 961
+  Width = 900
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsNone
   Caption = 'lazIPTV'
-  ClientHeight = 544
-  ClientWidth = 961
+  ClientHeight = 506
+  ClientWidth = 900
   Color = 2236962
   KeyPreview = True
   OnCloseQuery = FormCloseQuery
@@ -18,14 +18,15 @@ object MainForm: TMainForm
   OnResize = FormResize
   OnShow = FormShow
   Position = poDesktopCenter
+  LCLVersion = '3.6.0.0'
   object MenuPanel: TPanel
-    Left = 587
-    Height = 512
+    Left = 526
+    Height = 474
     Top = 32
     Width = 374
     Align = alRight
     BevelOuter = bvNone
-    ClientHeight = 512
+    ClientHeight = 474
     ClientWidth = 374
     Color = 3355443
     ParentBackground = False
@@ -271,7 +272,7 @@ object MainForm: TMainForm
     end
     object CateList: TListBox
       Left = 0
-      Height = 422
+      Height = 384
       Top = 42
       Width = 160
       Align = alLeft
@@ -293,7 +294,7 @@ object MainForm: TMainForm
     end
     object ChList: TListBox
       Left = 160
-      Height = 422
+      Height = 384
       Top = 42
       Width = 214
       Align = alClient
@@ -314,7 +315,7 @@ object MainForm: TMainForm
     object Panel1: TPanel
       Left = 0
       Height = 48
-      Top = 464
+      Top = 426
       Width = 374
       Align = alBottom
       BevelOuter = bvNone
@@ -390,11 +391,11 @@ object MainForm: TMainForm
     Left = 0
     Height = 32
     Top = 0
-    Width = 961
+    Width = 900
     Align = alTop
     BevelOuter = bvNone
     ClientHeight = 32
-    ClientWidth = 961
+    ClientWidth = 900
     Color = 5907201
     ParentBackground = False
     ParentColor = False
@@ -405,7 +406,7 @@ object MainForm: TMainForm
       Left = 12
       Height = 25
       Top = 4
-      Width = 918
+      Width = 857
       Anchors = [akTop, akLeft, akRight]
       AutoSize = False
       Caption = 'Caption'
@@ -420,9 +421,9 @@ object MainForm: TMainForm
   end
   object VLC: TPasLibVlcPlayer
     Left = 0
-    Height = 512
+    Height = 474
     Top = 32
-    Width = 587
+    Width = 526
     Align = alClient
     BevelOuter = bvNone
     Caption = 'VLC'

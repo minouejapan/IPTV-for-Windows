@@ -27,13 +27,14 @@ interface
 uses
 {$IFDEF FPC}
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  LazUTF8, Buttons, LCLType, ComCtrls, Menus, FpHttpClient, OpenSSLSockets,
+  LazUTF8, Buttons, LCLType, ComCtrls, Menus,
 {$ELSE}
   System.Classes, System.SysUtils, Vcl.Forms, Vcl.Controls, Vcl.Graphics,
-  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Buttons, Vcl.ComCtrls, Vcl.Menus, WinINet,
+  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Buttons, Vcl.ComCtrls, Vcl.Menus,
   LazUTF8wrap,
 {$ENDIF}
-  IniFiles, Windows, ActiveX, ShlObj, ClipBrd, PasLibVlcPlayerUnit, RegExpr;
+  IniFiles, Windows, ActiveX, ShlObj, ClipBrd, PasLibVlcPlayerUnit, RegExpr,
+  WinInet;
 
 type
   { TMainForm }
@@ -118,19 +119,6 @@ uses
 
 { TMainForm }
 
-{$IFDEF FPC}
-// WinINetを用いたHTMLファイルのダウンロード
-function LoadFromHTML(URLadr: string): string;
-begin
-  Result := '';
-  with TFPHttpClient.Create(Nil) do
-    try
-      Result:= Get(URLadr);
-    finally
-      Free;
-    end;
-end;
-{$ELSE}
 // WinINetを用いたHTMLファイルのダウンロード
 function LoadFromHTML(URLadr: string): string;
 var
@@ -184,7 +172,6 @@ begin
     InternetCloseHandle(hService);
   end;
 end;
-{$ENDIF}
 
 function GetSpecialFolder(const iFolder: DWORD): String;
 var

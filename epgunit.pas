@@ -12,11 +12,11 @@ interface
 
 uses
 {$IFDEF FPC}
-  Classes, SysUtils, DateUtils, LazUTF8, FpHttpClient,
+  Classes, SysUtils, DateUtils, LazUTF8,
 {$ELSE}
-  System.Classes, System.SysUtils, System.DateUtils, WinINet, LazUTF8wrap,
+  System.Classes, System.SysUtils, System.DateUtils, LazUTF8wrap,
 {$ENDIF}
-  RegExpr;
+  WinINet, RegExpr;
 
 type
   TVGuide = record
@@ -35,19 +35,7 @@ var
 
 implementation
 
-{$IFDEF FPC}
-// WinINetを用いたHTMLファイルのダウンロード
-function LoadFromHTML(URLadr: string): string;
-begin
-  Result := '';
-  with TFPHttpClient.Create(Nil) do
-    try
-      Result:= Get(URLadr);
-    finally
-      Free;
-    end;
-end;
-{$ELSE}
+
 // WinINetを用いたHTMLファイルのダウンロード
 function LoadFromHTML(URLadr: string): string;
 var
@@ -101,7 +89,6 @@ begin
     InternetCloseHandle(hService);
   end;
 end;
-{$ENDIF}
 
 // HTML特殊文字の処理
 // 1)エスケープ文字列 → 実際の文字
