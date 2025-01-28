@@ -18,7 +18,6 @@ object MainForm: TMainForm
   OnResize = FormResize
   OnShow = FormShow
   Position = poDesktopCenter
-  LCLVersion = '3.6.0.0'
   object MenuPanel: TPanel
     Left = 526
     Height = 474

@@ -12,13 +12,14 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, Buttons, Grids,
-  StdCtrls, LazUTF8;
+  StdCtrls, CustomDrawnControls, LazUTF8;
 
 type
 
   { TGrpEdit }
 
   TGrpEdit = class(TForm)
+    EPGsw: TCDCheckBox;
     EPGurl: TEdit;
     Label2: TLabel;
     UpBtn: TSpeedButton;
@@ -157,8 +158,8 @@ end;
 
 procedure TGrpEdit.FormCreate(Sender: TObject);
 var
-  gf, s: string;
-  s1, s2: TStringList;
+  gf, s, ep: string;
+  s1, s2, s3: TStringList;
   i, n: integer;
 begin
   gf := ExtractFilePath(Application.ExeName) + 'GRPLIST.TXT';
@@ -166,6 +167,7 @@ begin
   begin
     s1 := TStringList.Create;
     s2 := TStringList.Create;
+    s3 := TStringList.Create;
     s2.Delimiter := ',';
     s2.StrictDelimiter := True;
     try
@@ -179,7 +181,13 @@ begin
           s := s1.Strings[i];
           if UTF8Pos('$', s) = 1 then
           begin
-            EPGurl.Text := Copy(s, 2, UTF8Length(s));
+            ep := Copy(s, 2, UTF8Length(s));
+            s3.CommaText := ep;
+            EPGurl.Text := s3.Strings[0];
+            if s3.Count > 1 then
+              EPGsw.Checked := s3.Strings[1] = '1'
+            else
+              EPGsw.Checked := True;
             GrpEdit.RowCount := s1.Count - 1;
           end else begin
             s2.CommaText := s;
@@ -192,20 +200,25 @@ begin
     finally
       s1.Free;
       s2.Free;
+      s3.Free;
     end;
   end;
 end;
 
 procedure TGrpEdit.OKBtnClick(Sender: TObject);
 var
-  gf: string;
+  gf, sw: string;
   sl: TStringList;
   i: integer;
 begin
   gf := ExtractFilePath(Application.ExeName) + 'GRPLIST.TXT';
+  if EPGsw.Checked then
+    sw := '1'
+  else
+    sw := '0';
   sl := TStringList.Create;
   try
-    sl.Add('$' + EPGurl.Text);
+    sl.Add('$' + EPGurl.Text + ',' + sw);
     for i := 0 to GrpEdit.RowCount - 1 do
       sl.Add(GrpEdit.Rows[i].CommaText);
     sl.SaveToFile(gf, TEncoding.UTF8);

@@ -2,6 +2,7 @@
 
   lazIPTV
 
+  ver1.7  2025/01/29  番組情報表示の有効・無効を選択出来るようにした
   ver1.6  2025/01/20  EPGファイルを読み込んで視聴中の番組情報を表示できるようにした
   ver1.5  2024/11/18  ネット上から取得したプレイリストをファイルに保存出来るようにした
                       再生ライブラリをVLCライブラリに変更した
@@ -98,6 +99,7 @@ type
     ChID: array of string;      // EPGデータ取得用チャンネルID
     Ini: TIniFile;
     PlainM3u: string;
+    EPGSW: boolean;
     procedure LoadCHList(FileName: string);
     function GetGroupList: string;
     function GetOnlineList(aURL: string): string;
@@ -406,15 +408,19 @@ begin
     VLC.Play(url);
     VLC.SetAudioVolume(VolBar.Position);
     VolValue.Caption :=IntToStr(VolBar.Position);
-    URLLabel.Caption := '番組情報を取得中...お待ちください...';
+    if EPGSW then
+      URLLabel.Caption := '番組情報を取得中...お待ちください...';
     Application.ProcessMessages;
-    TVg := GetEPGGuide(Chid[i], Now);
-    st  := FormatDateTime('hh:nn', TVg.StartT);
-    et  := FormatDateTime('hh:nn', TVg.EndT);
-    ttl := ChList.Items[i] +  ' [' + st + ' - ' + et + '] ' +  TVg.Title;
-    TVTitle.Caption := ttl;
-    VLC.MarqueeShowText(ttl, 10, 10, clYellow, 26, 255, 5000);
-    URLLabel.Caption := url;
+    if EPGSW then
+    begin
+      TVg := GetEPGGuide(Chid[i], Now);
+      st  := FormatDateTime('hh:nn', TVg.StartT);
+      et  := FormatDateTime('hh:nn', TVg.EndT);
+      ttl := ChList.Items[i] +  ' [' + st + ' - ' + et + '] ' +  TVg.Title;
+      TVTitle.Caption := ttl;
+      VLC.MarqueeShowText(ttl, 10, 10, clYellow, 26, 255, 5000);
+      URLLabel.Caption := url;
+    end;
   end;
 end;
 
@@ -531,8 +537,8 @@ end;
 // 保存されているグループリストを読み込む
 function TMainForm.GetGroupList: string;
 var
-  s1, s2: TStringList;
-  gf, s: string;
+  s1, s2, s3: TStringList;
+  gf, s, ep: string;
   i, n: integer;
 begin
   Result := '';
@@ -542,6 +548,7 @@ begin
   begin
     s1 := TStringList.Create;
     s2 := TStringList.Create;
+    s3 := TStringList.Create;
     s2.Delimiter := ',';
     s2.StrictDelimiter := True;
     try
@@ -557,8 +564,15 @@ begin
           s := s1.Strings[i];
           // 先頭文字が$ならEPG URLとして読み込む
           if UTF8Pos('$', s) = 1 then
-            EPGurl := UTF8Copy(s, 2, UTF8Length(s))
-          else begin
+          begin
+            ep := UTF8Copy(s, 2, UTF8Length(s));
+            s3.CommaText := ep;
+            EPGurl := s3.Strings[0];
+            if s3.Count > 1 then
+              EPGSW := s3.Strings[1] = '0'
+            else
+              EPGSW := False;
+          end else begin
             if Utf8Pos(',', s1.Strings[i]) = 0 then
               Continue;
             s2.CommaText := s1.Strings[i];
@@ -577,6 +591,7 @@ begin
     finally
       s1.Free;
       s2.Free;
+      s3.Free;
     end;
   end;
 end;
@@ -756,7 +771,8 @@ end;
 
 procedure TMainForm.VLCClick(Sender: TObject);
 begin
-  VLC.MarqueeShowText(TVTitle.Caption, 10, 10, clYellow, 26, 255, 5000);
+  if EPGSW then
+    VLC.MarqueeShowText(TVTitle.Caption, 10, 10, clYellow, 26, 255, 5000);
 end;
 
 // 再生画面のダブルクリックでフルスクリーン・ウィンドウモードを切り替える

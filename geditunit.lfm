@@ -8,11 +8,15 @@ object GrpEdit: TGrpEdit
   ClientHeight = 399
   ClientWidth = 793
   Color = 3355443
+  Font.CharSet = SHIFTJIS_CHARSET
+  Font.Color = clWhite
+  Font.Height = -16
+  Font.Pitch = fpVariable
+  Font.Quality = fqDraft
   KeyPreview = True
   OnCreate = FormCreate
   OnKeyPress = FormKeyPress
   Position = poMainFormCenter
-  LCLVersion = '3.6.0.0'
   object OKBtn: TSpeedButton
     Left = 700
     Height = 34
@@ -232,6 +236,14 @@ object GrpEdit: TGrpEdit
     ParentFont = False
     TabOrder = 1
     Text = 'http://epg.utako.moe/jcom.xml'
+  end
+  object EPGsw: TCDCheckBox
+    Left = 404
+    Height = 21
+    Top = 360
+    Width = 118
+    DrawStyle = dsDefault
+    Caption = '番組ガイド無効'
   end
   object OD: TOpenDialog
     Title = 'プレイリストファイルを選択する'

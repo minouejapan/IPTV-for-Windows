@@ -17,10 +17,9 @@
     <VersionInfo>
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="1"/>
-      <MinorVersionNr Value="6"/>
-      <RevisionNr Value="1"/>
+      <MinorVersionNr Value="7"/>
       <Language Value="0411"/>
-      <StringTable Comments="MITライセンス" FileDescription="IPTV for Windows" InternalName="lazIPTV" LegalCopyright="INOUE, masahiro" LegalTrademarks="M&amp;I Soft" OriginalFilename="lazIPTV.exe" ProductName="lazIPTV" ProductVersion="1.6"/>
+      <StringTable Comments="MITライセンス" FileDescription="IPTV for Windows" InternalName="lazIPTV" LegalCopyright="INOUE, masahiro" LegalTrademarks="M&amp;I Soft" OriginalFilename="lazIPTV.exe" ProductName="lazIPTV" ProductVersion="7"/>
     </VersionInfo>
     <BuildModes>
       <Item Name="Debug" Default="True"/>
@@ -65,6 +64,9 @@
       <FormatVersion Value="2"/>
     </RunParams>
     <RequiredPackages>
+      <Item>
+        <PackageName Value="customdrawn"/>
+      </Item>
       <Item>
         <PackageName Value="PasLibVlcPlayer"/>
       </Item>
