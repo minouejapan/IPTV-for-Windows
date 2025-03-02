@@ -17,6 +17,7 @@ object GrpEdit: TGrpEdit
   OnCreate = FormCreate
   OnKeyPress = FormKeyPress
   Position = poMainFormCenter
+  LCLVersion = '3.6.0.0'
   object OKBtn: TSpeedButton
     Left = 700
     Height = 34
@@ -38,7 +39,7 @@ object GrpEdit: TGrpEdit
     ParentShowHint = False
   end
   object CancelBtn: TSpeedButton
-    Left = 596
+    Left = 600
     Height = 34
     Hint = '編集を破棄して終了する'
     Top = 356
@@ -210,7 +211,7 @@ object GrpEdit: TGrpEdit
     ParentShowHint = False
   end
   object Label2: TLabel
-    Left = 24
+    Left = 20
     Height = 21
     Top = 360
     Width = 63
@@ -223,10 +224,10 @@ object GrpEdit: TGrpEdit
     ParentFont = False
   end
   object EPGurl: TEdit
-    Left = 92
+    Left = 88
     Height = 29
     Top = 356
-    Width = 296
+    Width = 268
     Color = 4144959
     Font.CharSet = SHIFTJIS_CHARSET
     Font.Color = clWhite
@@ -238,12 +239,26 @@ object GrpEdit: TGrpEdit
     Text = 'http://epg.utako.moe/jcom.xml'
   end
   object EPGsw: TCDCheckBox
-    Left = 404
+    Left = 476
     Height = 21
-    Top = 360
+    Top = 361
     Width = 118
     DrawStyle = dsDefault
-    Caption = '番組ガイド無効'
+    Caption = 'ガイド表示無効'
+  end
+  object EPGColor: TColorBox
+    Left = 366
+    Height = 26
+    Top = 358
+    Width = 100
+    ColorRectOffset = 2
+    Selected = clWhite
+    Style = [cbStandardColors]
+    AutoSelect = False
+    AutoSize = False
+    Color = 4144959
+    ItemHeight = 20
+    TabOrder = 3
   end
   object OD: TOpenDialog
     Title = 'プレイリストファイルを選択する'

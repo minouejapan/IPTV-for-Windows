@@ -12,13 +12,12 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, Buttons, Grids,
-  StdCtrls, CustomDrawnControls, LazUTF8;
+  StdCtrls, CustomDrawnControls, ColorBox, LazUTF8;
 
 type
-
   { TGrpEdit }
-
   TGrpEdit = class(TForm)
+    EPGColor: TColorBox;
     EPGsw: TCDCheckBox;
     EPGurl: TEdit;
     Label2: TLabel;
@@ -45,7 +44,7 @@ type
     procedure OKBtnClick(Sender: TObject);
     procedure UpBtnClick(Sender: TObject);
   private
-
+    MkColor: integer;
   public
 
   end;
@@ -56,6 +55,38 @@ var
 implementation
 
 {$R *.lfm}
+
+const
+  mkcol_Default = $00FFFFFF;
+  mkcol_Black   = $00000000;
+  mkcol_Gray    = $00808080;
+  mkcol_Silver  = $00C0C0C0;
+  mkcol_White   = $00FFFFFF;
+
+  //              RR      GG             BB
+  mkcol_Maroon  = $80 or ($00 shl 8) or ($00 shl 16);
+  mkcol_Red     = $FF or ($00 shl 8) or ($00 shl 16);
+  mkcol_Fuchsia = $FF or ($00 shl 8) or ($FF shl 16);
+  mkcol_Yellow  = $FF or ($FF shl 8) or ($00 shl 16);
+  mkcol_Olive   = $80 or ($80 shl 8) or ($00 shl 16);
+  mkcol_Green   = $00 or ($80 shl 8) or ($00 shl 16);
+  mkcol_Teal    = $00 or ($80 shl 8) or ($80 shl 16);
+  mkcol_Lime    = $00 or ($FF shl 8) or ($00 shl 16);
+  mkcol_Purple  = $80 or ($00 shl 8) or ($80 shl 16);
+  mkcol_Navy    = $00 or ($00 shl 8) or ($80 shl 16);
+  mkcol_Blue    = $00 or ($00 shl 8) or ($FF shl 16);
+  mkcol_Aqua    = $00 or ($FF shl 8) or ($FF shl 16);
+  MarqueeColor: array[0..15] of integer =
+                    (
+                      mkcol_Black, mkcol_Navy, mkcol_Green, mkcol_Teal, mkcol_Maroon, mkcol_Purple, mkcol_olive, mkcol_Gray,
+                      mkcol_Silver, mkcol_Blue, mkcol_Lime, mkcol_Aqua, mkcol_Red, mkcol_Fuchsia, mkcol_Yellow, mkcol_White
+                    );
+  WindowsColor: array[0..15] of integer =
+                    (
+                      clBlack, clMaroon, clGreen, clOlive, clNavy, clPurple, clTeal, clGray,
+                      clSilver, clRed, clLime, clYellow, clBlue, clFuchsia, clAqua, clWhite
+                    );
+
 
 { TGrpEdit }
 
@@ -160,7 +191,7 @@ procedure TGrpEdit.FormCreate(Sender: TObject);
 var
   gf, s, ep: string;
   s1, s2, s3: TStringList;
-  i, n: integer;
+  i, n, cl, j: integer;
 begin
   gf := ExtractFilePath(Application.ExeName) + 'GRPLIST.TXT';
   if FileExists(gf) then
@@ -188,6 +219,16 @@ begin
               EPGsw.Checked := s3.Strings[1] = '1'
             else
               EPGsw.Checked := True;
+            if s3.Count > 2 then
+            begin
+              cl := StrToInt(s3.Strings[2]);
+              for j := 0 to 15 do
+                if cl = MarqueeColor[j] then
+                begin
+                  EPGColor.Selected := WindowsColor[j];
+                  Break;
+                end;
+            end;
             GrpEdit.RowCount := s1.Count - 1;
           end else begin
             s2.CommaText := s;
@@ -218,7 +259,7 @@ begin
     sw := '0';
   sl := TStringList.Create;
   try
-    sl.Add('$' + EPGurl.Text + ',' + sw);
+    sl.Add('$' + EPGurl.Text + ',' + sw + ',' + IntToStr(MarqueeColor[EPGColor.ItemIndex]));
     for i := 0 to GrpEdit.RowCount - 1 do
       sl.Add(GrpEdit.Rows[i].CommaText);
     sl.SaveToFile(gf, TEncoding.UTF8);

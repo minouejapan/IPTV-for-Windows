@@ -79,6 +79,7 @@ type
     procedure FormResize(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure GrpSelectSelect(Sender: TObject);
+    procedure Image1Click(Sender: TObject);
     procedure MnuCopyClick(Sender: TObject);
     procedure VLCClick(Sender: TObject);
     procedure VLCDblClick(Sender: TObject);
@@ -100,6 +101,7 @@ type
     Ini: TIniFile;
     PlainM3u: string;
     EPGSW: boolean;
+    MkColor: integer;
     procedure LoadCHList(FileName: string);
     function GetGroupList: string;
     function GetOnlineList(aURL: string): string;
@@ -381,6 +383,7 @@ procedure TMainForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
   //VLC.Stop(0);
   Ini.WriteInteger('Options', 'Volume', VolBar.Position);
+  Ini.WriteInteger('Options', 'MakeeCol', MkColor);
   if GrpSelect.ItemIndex > -1 then
     Ini.WriteInteger('Options', 'GroupIndex', GrpSelect.ItemIndex);
   Ini.Free;
@@ -418,7 +421,8 @@ begin
       et  := FormatDateTime('hh:nn', TVg.EndT);
       ttl := ChList.Items[i] +  ' [' + st + ' - ' + et + '] ' +  TVg.Title;
       TVTitle.Caption := ttl;
-      VLC.MarqueeShowText(ttl, 10, 10, clYellow, 26, 255, 5000);
+      VLC.MarqueeSetColor(MkColor);
+      VLC.MarqueeShowText(ttl, 10, 10, MkColor, 26, 255, 5000);
       URLLabel.Caption := url;
     end;
   end;
@@ -572,6 +576,8 @@ begin
               EPGSW := s3.Strings[1] = '0'
             else
               EPGSW := False;
+            if s3.Count > 2 then
+              MkColor := StrToInt(s3.Strings[2]);
           end else begin
             if Utf8Pos(',', s1.Strings[i]) = 0 then
               Continue;
@@ -610,6 +616,7 @@ begin
   VolBar.Position := Ini.ReadInteger('Options', 'Volume', 100);
   VolValue.Caption:= IntToStr(VolBar.Position);
   VolBarChange(nil);
+  MkColor := Ini.ReadInteger('Options', 'MakeeCol', clWhite);
   // lazIPTVと同じフォルダ内にGRPLIST.TXTがあればグループリストとして
   // プレイリストが登録されていれば読み込む
   M3uFile := GetGroupList;
@@ -764,6 +771,11 @@ begin
   end;
 end;
 
+procedure TMainForm.Image1Click(Sender: TObject);
+begin
+  VLC.Play('https://n24-cdn-live.ntv.co.jp/ch01/index.m3u8');
+end;
+
 procedure TMainForm.MnuCopyClick(Sender: TObject);
 begin
   ClipBoard.AsText := URLlabel.Caption;
@@ -772,7 +784,10 @@ end;
 procedure TMainForm.VLCClick(Sender: TObject);
 begin
   if EPGSW then
-    VLC.MarqueeShowText(TVTitle.Caption, 10, 10, clYellow, 26, 255, 5000);
+  begin
+    VLC.MarqueeSetColor(MkColor);
+    VLC.MarqueeShowText(TVTitle.Caption, 10, 10, mkColor, 26, 255, 5000);
+  end;
 end;
 
 // 再生画面のダブルクリックでフルスクリーン・ウィンドウモードを切り替える
