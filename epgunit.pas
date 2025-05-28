@@ -46,12 +46,16 @@ var
   lpBuffer    : PChar;
   RBuff       : TMemoryStream;
   TBuff       : TStringList;
+  dwTimeOut   : DWORD;
 begin
   Result   := '';
   hSession := InternetOpen('WinINet', INTERNET_OPEN_TYPE_PRECONFIG, nil, nil, 0);
 
   if Assigned(hSession) then
   begin
+    dwTimeOut := 1000; // Timeout in milliseconds
+    InternetSetOption(hSession, INTERNET_OPTION_CONNECT_TIMEOUT, @dwTimeOut, SizeOf(dwTimeOut));
+
     dwFlag   := INTERNET_FLAG_RELOAD;
     hService := InternetOpenUrl(hSession, PChar(URLadr), nil, 0, dwFlag, 0);
     if Assigned(hService ) then
@@ -96,7 +100,7 @@ end;
 function Restore2RealChar(Base: string): string;
 var
   tmp, cd: string;
-  w: integer;
+  w, mp, ml: integer;
   ch: Char;
   r: TRegExpr;
 begin
@@ -118,8 +122,10 @@ begin
     if r.Exec then
     begin
       repeat
-        UTF8Delete(tmp, r.MatchPos[0], r.MatchLen[0]);
         cd := r.Match[0];
+        mp := r.MatchPos[0];
+        ml := r.MatchLen[0];
+        UTF8Delete(tmp, mp, ml);
         UTF8Delete(cd, 1, 2);           // &#を削除する
         UTF8Delete(cd, UTF8Length(cd), 1);  // 最後の;を削除する
         if cd[1] = 'x' then         // 先頭が16進数を表すxであればDelphiの16進数接頭文字$に変更する
@@ -128,10 +134,11 @@ begin
           w := StrToInt(cd);
           ch := Char(w);
         except
-          ch := '？';
+          ch := '?';
         end;
-        UTF8Insert(ch, tmp, r.MatchPos[0]);
-      until not r.ExecNext;
+        UTF8Insert(ch, tmp, mp);
+        r.InputString := tmp;
+      until not r.Exec;
     end;
   finally
     r.Free;

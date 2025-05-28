@@ -2,6 +2,10 @@
 
   lazIPTV
 
+  ver1.9  2025/05/29  番組情報(EPG)取得時のタイムアウト設定を追加した
+                      EPGを取得出来なかった場合、チャンネルを切り替えるたびにEPGを取得しない
+                      ようにした
+  ver1.8  2025/03/02  番組情報表示色を変更出来るようにした
   ver1.7  2025/01/29  番組情報表示の有効・無効を選択出来るようにした
   ver1.6  2025/01/20  EPGファイルを読み込んで視聴中の番組情報を表示できるようにした
   ver1.5  2024/11/18  ネット上から取得したプレイリストをファイルに保存出来るようにした
@@ -141,7 +145,7 @@ begin
   begin
     dwFlag   := INTERNET_FLAG_RELOAD;
     hService := InternetOpenUrl(hSession, PChar(URLadr), nil, 0, dwFlag, 0);
-    if Assigned(hService ) then
+    if Assigned(hService) then
     begin
       RBuff := TMemoryStream.Create;
       try
@@ -417,12 +421,17 @@ begin
     if EPGSW then
     begin
       TVg := GetEPGGuide(Chid[i], Now);
-      st  := FormatDateTime('hh:nn', TVg.StartT);
-      et  := FormatDateTime('hh:nn', TVg.EndT);
-      ttl := ChList.Items[i] +  ' [' + st + ' - ' + et + '] ' +  TVg.Title;
-      TVTitle.Caption := ttl;
-      VLC.MarqueeSetColor(MkColor);
-      VLC.MarqueeShowText(ttl, 10, 10, MkColor, 26, 255, 5000);
+      // EPGデータを取得出来なかった
+      if TVg.Title = '' then
+        EPGSW := False
+      else begin
+        st  := FormatDateTime('hh:nn', TVg.StartT);
+        et  := FormatDateTime('hh:nn', TVg.EndT);
+        ttl := ChList.Items[i] +  ' [' + st + ' - ' + et + '] ' +  TVg.Title;
+        TVTitle.Caption := ttl;
+        VLC.MarqueeSetColor(MkColor);
+        VLC.MarqueeShowText(ttl, 10, 10, MkColor, 26, 255, 5000);
+      end;
       URLLabel.Caption := url;
     end;
   end;
