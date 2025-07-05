@@ -12,7 +12,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, Buttons, Grids,
-  StdCtrls, CustomDrawnControls, ColorBox, LazUTF8;
+  StdCtrls, CustomDrawnControls, ColorBox, Spin, LazUTF8;
 
 type
   { TGrpEdit }
@@ -21,6 +21,7 @@ type
     EPGsw: TCDCheckBox;
     EPGurl: TEdit;
     Label2: TLabel;
+    MkFSize: TSpinEdit;
     UpBtn: TSpeedButton;
     DwnBtn: TSpeedButton;
     Label1: TLabel;
@@ -44,17 +45,9 @@ type
     procedure OKBtnClick(Sender: TObject);
     procedure UpBtnClick(Sender: TObject);
   private
-    MkColor: integer;
   public
-
+    MkColor: integer;
   end;
-
-var
-  GrpEdit: TGrpEdit;
-
-implementation
-
-{$R *.lfm}
 
 const
   mkcol_Default = $00FFFFFF;
@@ -63,6 +56,7 @@ const
   mkcol_Silver  = $00C0C0C0;
   mkcol_White   = $00FFFFFF;
 
+  // VCLで用いているRGB構成とWindowsのRGB構成が異なるためこのテーブルで変換する
   //              RR      GG             BB
   mkcol_Maroon  = $80 or ($00 shl 8) or ($00 shl 16);
   mkcol_Red     = $FF or ($00 shl 8) or ($00 shl 16);
@@ -86,6 +80,13 @@ const
                       clBlack, clMaroon, clGreen, clOlive, clNavy, clPurple, clTeal, clGray,
                       clSilver, clRed, clLime, clYellow, clBlue, clFuchsia, clAqua, clWhite
                     );
+
+var
+  GrpEdit: TGrpEdit;
+
+implementation
+
+{$R *.lfm}
 
 
 { TGrpEdit }
@@ -257,6 +258,7 @@ begin
     sw := '1'
   else
     sw := '0';
+  MkColor := MarqueeColor[EPGColor.ItemIndex];
   sl := TStringList.Create;
   try
     sl.Add('$' + EPGurl.Text + ',' + sw + ',' + IntToStr(MarqueeColor[EPGColor.ItemIndex]));

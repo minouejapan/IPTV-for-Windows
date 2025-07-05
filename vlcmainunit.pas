@@ -2,6 +2,11 @@
 
   lazIPTV
 
+  ver2.0  2025/07/05  新たな番組情報(EPG)に対応するため、チャンネルID変換テーブルと変換処理を
+                      追加した
+                      番組情報がない場合、直前のチャンネルの情報が表示される不具合を修正した
+                      番組情報表示フォントサイズを変更出来るようにした
+                      EPG URL, EPG有効・無効, フォトサイズ,色を保存出来るようにした
   ver1.9  2025/05/29  番組情報(EPG)取得時のタイムアウト設定を追加した
                       EPGを取得出来なかった場合、チャンネルを切り替えるたびにEPGを取得しない
                       ようにした
@@ -105,7 +110,8 @@ type
     Ini: TIniFile;
     PlainM3u: string;
     EPGSW: boolean;
-    MkColor: integer;
+    MkColor,
+    MkFSize: integer;
     procedure LoadCHList(FileName: string);
     function GetGroupList: string;
     function GetOnlineList(aURL: string): string;
@@ -386,8 +392,12 @@ end;
 procedure TMainForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
   //VLC.Stop(0);
-  Ini.WriteInteger('Options', 'Volume', VolBar.Position);
+  Ini.WriteInteger('Options', 'Volume',   VolBar.Position);
   Ini.WriteInteger('Options', 'MakeeCol', MkColor);
+  Ini.WriteString('Options',  'EPG_URL',  EPGurl);
+  Ini.WriteInteger('Options', 'MkFSize',  MkFSize);
+  Ini.WriteBool('Options',    'EPG_ON',   EPGsw);
+
   if GrpSelect.ItemIndex > -1 then
     Ini.WriteInteger('Options', 'GroupIndex', GrpSelect.ItemIndex);
   Ini.Free;
@@ -423,14 +433,15 @@ begin
       TVg := GetEPGGuide(Chid[i], Now);
       // EPGデータを取得出来なかった
       if TVg.Title = '' then
-        EPGSW := False
-      else begin
+      begin
+        TVTitle.Caption := '';
+      end else begin
         st  := FormatDateTime('hh:nn', TVg.StartT);
         et  := FormatDateTime('hh:nn', TVg.EndT);
         ttl := ChList.Items[i] +  ' [' + st + ' - ' + et + '] ' +  TVg.Title;
         TVTitle.Caption := ttl;
-        VLC.MarqueeSetColor(MkColor);
-        VLC.MarqueeShowText(ttl, 10, 10, MkColor, 26, 255, 5000);
+        VLC.MarqueeSetColor(MarqueeColor[MkColor]);
+        VLC.MarqueeShowText(ttl, 10, 10, MarqueeColor[MkColor], MkFSize, 255, 5000);
       end;
       URLLabel.Caption := url;
     end;
@@ -550,7 +561,7 @@ end;
 // 保存されているグループリストを読み込む
 function TMainForm.GetGroupList: string;
 var
-  s1, s2, s3: TStringList;
+  s1, s2: TStringList;
   gf, s, ep: string;
   i, n: integer;
 begin
@@ -561,7 +572,6 @@ begin
   begin
     s1 := TStringList.Create;
     s2 := TStringList.Create;
-    s3 := TStringList.Create;
     s2.Delimiter := ',';
     s2.StrictDelimiter := True;
     try
@@ -579,14 +589,6 @@ begin
           if UTF8Pos('$', s) = 1 then
           begin
             ep := UTF8Copy(s, 2, UTF8Length(s));
-            s3.CommaText := ep;
-            EPGurl := s3.Strings[0];
-            if s3.Count > 1 then
-              EPGSW := s3.Strings[1] = '0'
-            else
-              EPGSW := False;
-            if s3.Count > 2 then
-              MkColor := StrToInt(s3.Strings[2]);
           end else begin
             if Utf8Pos(',', s1.Strings[i]) = 0 then
               Continue;
@@ -606,7 +608,6 @@ begin
     finally
       s1.Free;
       s2.Free;
-      s3.Free;
     end;
   end;
 end;
@@ -625,7 +626,11 @@ begin
   VolBar.Position := Ini.ReadInteger('Options', 'Volume', 100);
   VolValue.Caption:= IntToStr(VolBar.Position);
   VolBarChange(nil);
-  MkColor := Ini.ReadInteger('Options', 'MakeeCol', clWhite);
+  MkColor := Ini.ReadInteger('Options', 'MakeeCol', 15);
+  EpgURL  := Ini.ReadString('Options',  'EPG_URL',  'https://github.com/karenda-jp/etc/raw/refs/heads/main/guides.xml');
+  MkFSize := Ini.ReadInteger('Options', 'MkFSize',  32);
+  EPGsw   := Ini.ReadBool('Options',    'EPG_ON',   False);
+
   // lazIPTVと同じフォルダ内にGRPLIST.TXTがあればグループリストとして
   // プレイリストが登録されていれば読み込む
   M3uFile := GetGroupList;
@@ -794,8 +799,8 @@ procedure TMainForm.VLCClick(Sender: TObject);
 begin
   if EPGSW then
   begin
-    VLC.MarqueeSetColor(MkColor);
-    VLC.MarqueeShowText(TVTitle.Caption, 10, 10, mkColor, 26, 255, 5000);
+    VLC.MarqueeSetColor(MarqueeColor[MkColor]);
+    VLC.MarqueeShowText(TVTitle.Caption, 10, 10, MarqueeColor[mkColor], MkFSize, 255, 5000);
   end;
 end;
 
@@ -829,8 +834,16 @@ begin
   i := GrpSelect.ItemIndex;
   ge := TGrpEdit.Create(Self);
   try
+    ge.EPGurl.Text  := EPGurl;
+    ge.MkFSize.Value:= MkFSize;
+    ge.EPGColor.Selected:= WindowsColor[MkColor];
+    ge.EPGsw.Checked:= EPGsw;
     if ge.ShowModal = mrOK then
     begin
+      EPGurl  := ge.EPGurl.Text;
+      MkFSize := ge.MkFSize.Value;
+      MkColor := ge.EPGColor.ItemIndex;
+      EPGsw   := ge.EPGsw.Checked;
       m3u := GetGroupList;
       if FileExists(m3u) then
         LoadCHList(m3u)

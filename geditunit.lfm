@@ -17,13 +17,12 @@ object GrpEdit: TGrpEdit
   OnCreate = FormCreate
   OnKeyPress = FormKeyPress
   Position = poMainFormCenter
-  LCLVersion = '3.6.0.0'
   object OKBtn: TSpeedButton
-    Left = 700
+    Left = 716
     Height = 34
     Hint = '編集を保存して終了する'
     Top = 356
-    Width = 86
+    Width = 70
     Caption = ''
     Flat = True
     Font.CharSet = ANSI_CHARSET
@@ -39,11 +38,11 @@ object GrpEdit: TGrpEdit
     ParentShowHint = False
   end
   object CancelBtn: TSpeedButton
-    Left = 600
+    Left = 644
     Height = 34
     Hint = '編集を破棄して終了する'
     Top = 356
-    Width = 86
+    Width = 66
     Caption = ''
     Flat = True
     Font.CharSet = ANSI_CHARSET
@@ -226,6 +225,7 @@ object GrpEdit: TGrpEdit
   object EPGurl: TEdit
     Left = 88
     Height = 29
+    Hint = 'EPGリストサイトURLを指定する'
     Top = 356
     Width = 268
     Color = 4144959
@@ -235,20 +235,24 @@ object GrpEdit: TGrpEdit
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
     ParentFont = False
+    ParentShowHint = False
+    ShowHint = True
     TabOrder = 1
     Text = 'http://epg.utako.moe/jcom.xml'
   end
   object EPGsw: TCDCheckBox
-    Left = 476
+    Left = 552
     Height = 21
+    Hint = 'チェックするとCHガイド表示を無効にする'
     Top = 361
-    Width = 118
+    Width = 79
     DrawStyle = dsDefault
-    Caption = 'ガイド表示無効'
+    Caption = 'EPG有効'
   end
   object EPGColor: TColorBox
     Left = 366
     Height = 26
+    Hint = 'CH]ガイド表示色を指定する'
     Top = 358
     Width = 100
     ColorRectOffset = 2
@@ -258,7 +262,26 @@ object GrpEdit: TGrpEdit
     AutoSize = False
     Color = 4144959
     ItemHeight = 20
+    ParentShowHint = False
+    ShowHint = True
     TabOrder = 3
+  end
+  object MkFSize: TSpinEdit
+    Left = 476
+    Height = 28
+    Top = 358
+    Width = 56
+    Color = 4144959
+    Font.CharSet = SHIFTJIS_CHARSET
+    Font.Color = clWhite
+    Font.Height = -15
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    MaxValue = 12
+    MinValue = 60
+    ParentFont = False
+    TabOrder = 4
+    Value = 32
   end
   object OD: TOpenDialog
     Title = 'プレイリストファイルを選択する'

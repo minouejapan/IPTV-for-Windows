@@ -1,6 +1,6 @@
-(*
-  EPGリスト処理
-*)
+//
+//  EPGリスト処理
+//
 unit epgunit;
 
 {$IFDEF FPC}
@@ -25,6 +25,10 @@ type
     StartT,
     EndT: TDateTime;
   end;
+  TEPGID = record
+    PlaneID,
+    QuotedUD: string;
+  end;
 
 function GetEPGGuide(aID: string; PTime: TDateTime): TVGuide;
 
@@ -32,6 +36,7 @@ var
   EPGurl,
   EPGxml: string;
 
+{$I epg_ch_id.inc}  // EPG ID置換テーブル
 
 implementation
 
@@ -47,9 +52,12 @@ var
   RBuff       : TMemoryStream;
   TBuff       : TStringList;
   dwTimeOut   : DWORD;
+  ua          : string;
 begin
   Result   := '';
-  hSession := InternetOpen('WinINet', INTERNET_OPEN_TYPE_PRECONFIG, nil, nil, 0);
+              // ユーザエージェントをEdgeに設定する
+  ua       := 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36 Edg/79.0.309.65';
+  hSession := InternetOpen(PChar(ua), INTERNET_OPEN_TYPE_PRECONFIG, nil, nil, 0);
 
   if Assigned(hSession) then
   begin
@@ -153,9 +161,31 @@ begin
   Result := UTF8Pos('<channel id=', EPGxml) > 0;
 end;
 
+function GetEPGID(aID: string): TEPGID;
+var
+  i: integer;
+  qid, pid: string;
+begin
+  Result.PlaneID := '';
+  Result.QuotedUD:= '';
+  for i := 0 to Length(ID_Org) - 1 do
+  begin
+    if aID = ID_Org[i] then
+    begin
+      pid := EPG_ID[i];
+      qid := QuoteRegExprMetaChars(pid); // IDに正規表現のメタ文字が含まれている場合\でescapeする
+      Result.PlaneID := pid;
+      Result.QuotedUD:= qid;
+      Break;
+    end;
+  end;
+end;
+
 function GetEPGGuide(aID: string; PTime: TDateTime): TVGuide;
 var
-  sr, guide, sn, en, tl, ttl, exp: string;
+  {sr, guide,}
+  sn, en, tl, ttl, exp: string;
+  id: TEPGID;
   dt, st, et: TDateTime;
   r1, r2: TRegExpr;
 begin
@@ -168,17 +198,33 @@ begin
   end;
 
   Result.Title := '';
+  Result.StartT:= 0;
+  Result.EndT  := 0;
+  Result.Description:= '';
+
+  id := GetEPGID(aID);
+  // IDがなければ処理をスキップ
+  if id.PlaneID = '' then
+    Exit;
+  // IDがEPGリスト内にあるかどうか検索してなければ処理をスキップ
+  if Pos(id.PlaneID, EPGxml) = 0 then
+    Exit;
+
   dt := PTime;
-  sr := '<channel id="' + aID + '">.*?<channel';
+  //sr := '<channel id="' + id + '">.*?<channel';
   r1 := TRegExpr.Create;
   r2 := TRegExpr.Create;
   try
+    // 各チャンネルの番組情報が<channel id=????></channel>で括られていない場合が
+    // あるため、該当チャンネルID情報だけを抜き出す処理をスキップさせた
+    // その事により全情報をべた検索するため時間がかかるようになった
+    {
     r1.InputString := EPGxml;
     r1.Expression  := sr;
     if r1.Exec then
     begin
       guide := r1.Match[0];
-      guide := ReplaceRegExpr('<channel id="' + aID + '">.*?</channel>', guide, '');
+      guide := ReplaceRegExpr('<channel id="' + id + '">.*?</channel>', guide, '');
     // リストの最後
     end else begin
       sr := '<channel id="' + aID + '">.*?</tv>';
@@ -190,8 +236,9 @@ begin
       end else
         Exit;
     end;
-    r1.InputString := guide;
-    r1.Expression  := '<programme start=.*?</programme>';
+    }
+    r1.InputString := EPGxml;
+    r1.Expression  := '<programme start=.*?channel="' + id.QuotedUD + '">.*?</programme>';
     if r1.Exec then
     begin
       repeat
@@ -241,7 +288,6 @@ begin
 end;
 
 initialization
-  EPGurl := 'http://epg.utako.moe/jcom.xml';
   EPGxml := '';
 
 end.

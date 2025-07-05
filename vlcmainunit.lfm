@@ -429,7 +429,8 @@ object MainForm: TMainForm
     Caption = 'VLC'
     Font.CharSet = SHIFTJIS_CHARSET
     Font.Color = clWhite
-    Font.Height = -21
+    Font.Height = -32
+    Font.Name = 'Yu Gothic UI'
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
     Font.Style = [fsBold]
