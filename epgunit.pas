@@ -166,8 +166,8 @@ var
   i: integer;
   qid, pid: string;
 begin
-  Result.PlaneID := '';
-  Result.QuotedUD:= '';
+  Result.PlaneID := aID;
+  Result.QuotedUD:= QuoteRegExprMetaChars(aID);
   for i := 0 to Length(ID_Org) - 1 do
   begin
     if aID = ID_Org[i] then
@@ -189,24 +189,26 @@ var
   dt, st, et: TDateTime;
   r1, r2: TRegExpr;
 begin
-  if EPGxml = '' then
-  begin
-    if EPGurl <> '' then
-      InitializeEPG
-    else
-      Exit;
-  end;
-
   Result.Title := '';
   Result.StartT:= 0;
   Result.EndT  := 0;
   Result.Description:= '';
 
+  if EPGxml = '' then
+  begin
+    if EPGurl <> '' then
+    begin
+      InitializeEPG;
+      if EPGxml = '' then
+        Exit;
+    end else
+      Exit;
+  end;
   id := GetEPGID(aID);
   // IDがなければ処理をスキップ
   if id.PlaneID = '' then
     Exit;
-  // IDがEPGリスト内にあるかどうか検索してなければ処理をスキップ
+// IDがEPGリスト内にあるかどうか検索してなければ処理をスキップ
   if Pos(id.PlaneID, EPGxml) = 0 then
     Exit;
 
@@ -218,25 +220,6 @@ begin
     // 各チャンネルの番組情報が<channel id=????></channel>で括られていない場合が
     // あるため、該当チャンネルID情報だけを抜き出す処理をスキップさせた
     // その事により全情報をべた検索するため時間がかかるようになった
-    {
-    r1.InputString := EPGxml;
-    r1.Expression  := sr;
-    if r1.Exec then
-    begin
-      guide := r1.Match[0];
-      guide := ReplaceRegExpr('<channel id="' + id + '">.*?</channel>', guide, '');
-    // リストの最後
-    end else begin
-      sr := '<channel id="' + aID + '">.*?</tv>';
-      r1.Expression  := sr;
-      if r1.Exec then
-      begin
-        guide := r1.Match[0];
-        guide := ReplaceRegExpr('<channel id="' + aID + '">.*?</channel>', guide, '');
-      end else
-        Exit;
-    end;
-    }
     r1.InputString := EPGxml;
     r1.Expression  := '<programme start=.*?channel="' + id.QuotedUD + '">.*?</programme>';
     if r1.Exec then
@@ -273,7 +256,9 @@ begin
             exp := r2.Match[0];
             exp := ReplaceRegExpr('</desc>', ReplaceRegExpr('<desc lang="ja">', exp, ''), '');
           end;
-          Result.Title       := Restore2RealChar(ttl);
+          Result.Title       := UTF8Copy(Trim(Restore2RealChar(ttl)) +
+                                //'●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●', 1, 40);
+                                '　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　', 1, 40);
           Result.Description := Restore2RealChar(exp);
           Result.StartT      := st;
           Result.EndT        := et;

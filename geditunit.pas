@@ -12,7 +12,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, Buttons, Grids,
-  StdCtrls, CustomDrawnControls, ColorBox, Spin, LazUTF8;
+  StdCtrls, CustomDrawnControls, ColorBox, Spin, LazUTF8, fpJSON, JSONIni;
 
 type
   { TGrpEdit }
@@ -45,8 +45,13 @@ type
     procedure OKBtnClick(Sender: TObject);
     procedure UpBtnClick(Sender: TObject);
   private
+    GLJsonFile: string;                 // CHグループリストJSONファイル名
+    procedure LoadGLTxt(GLTxt: string); // 旧バージョン用CHグループリストテキストファイル読み込み
+    procedure LoadGLJson;               // CHグループリストJSONファイル読み込み
+    procedure SaveGLJson;
   public
     MkColor: integer;
+    procedure JsonConverter;            // GRPLIST.TXTをgrplist.jsonファイルにコンバートする
   end;
 
 const
@@ -90,6 +95,15 @@ implementation
 
 
 { TGrpEdit }
+
+// ver2.2限定
+// CHグループリストをGRPLIST.TXTからgrplist.jsonに変更したことに伴い、
+// ver2.2を起動した初回だけ実行してファイルをコンバートする
+procedure TGrpEdit.JsonConverter;
+begin
+  LoadGLTxt(ExtractFilePath(Application.ExeName) + 'grplist.txt');
+  OKBtnClick(nil);
+end;
 
 procedure TGrpEdit.FormKeyPress(Sender: TObject; var Key: char);
 begin
@@ -188,14 +202,13 @@ begin
   end;
 end;
 
-procedure TGrpEdit.FormCreate(Sender: TObject);
+procedure TGrpEdit.LoadGLTxt(GLTxt: string);
 var
-  gf, s, ep: string;
+  s, ep: string;
   s1, s2, s3: TStringList;
   i, n, cl, j: integer;
 begin
-  gf := ExtractFilePath(Application.ExeName) + 'GRPLIST.TXT';
-  if FileExists(gf) then
+  if FileExists(GLTxt) then
   begin
     s1 := TStringList.Create;
     s2 := TStringList.Create;
@@ -203,7 +216,7 @@ begin
     s2.Delimiter := ',';
     s2.StrictDelimiter := True;
     try
-      s1.LoadFromFile(gf, TEncoding.UTF8);
+      s1.LoadFromFile(GLTxt, TEncoding.UTF8);
       if s1.Count > 0 then
       begin
         GrpEdit.RowCount := s1.Count;
@@ -247,29 +260,115 @@ begin
   end;
 end;
 
-procedure TGrpEdit.OKBtnClick(Sender: TObject);
+procedure TGrpEdit.LoadGLJson;
 var
-  gf, sw: string;
+  item, value: string;
   sl: TStringList;
-  i: integer;
+  jo: TJSONObject;
+  i, n: integer;
 begin
-  gf := ExtractFilePath(Application.ExeName) + 'GRPLIST.TXT';
-  if EPGsw.Checked then
-    sw := '1'
-  else
-    sw := '0';
-  MkColor := MarqueeColor[EPGColor.ItemIndex];
+  if FileExists(GLJsonFile) then
+  begin
+    sl := TStringList.Create;
+    try
+      sl.LoadFromFile(GLJsonFile, TEncoding.UTF8);
+      jo := TJSONObject(GetJSON(sl.Text));
+      if jo.Find('CHGroup') <> nil then
+      begin
+        n := jo.Objects['CHGroup'].Count;
+        GrpEdit.RowCount := n;
+        for i := 0 to n - 1 do
+        begin
+          item  := jo.Objects['CHGroup'].Names[i];
+          value := jo.Objects['CHGroup'].Strings[item];
+          GrpEdit.Cells[0, i] := item;
+          GrpEdit.Cells[1, i] := value;
+        end;
+      end;
+    finally
+      sl.Free;
+      jo.Free;
+    end;
+  end;
+end;
+
+procedure TGrpEdit.SaveGLJson;
+var
+  sl: TStringList;
+  jo: TJSONObject;
+  jd: TJSONData;
+  i, n: integer;
+begin
+  jo := TJSONObject(GetJSON('{ "CHGroup" : {}}'));
+  jd := jo;
+  n  := GrpEdit.RowCount;
   sl := TStringList.Create;
   try
-    sl.Add('$' + EPGurl.Text + ',' + sw + ',' + IntToStr(MarqueeColor[EPGColor.ItemIndex]));
-    for i := 0 to GrpEdit.RowCount - 1 do
-      sl.Add(GrpEdit.Rows[i].CommaText);
-    sl.SaveToFile(gf, TEncoding.UTF8);
+    for i := 0 to n - 1 do
+      jo.Objects['CHGroup'].Add(GrpEdit.Cells[0, i], GrpEdit.Cells[1, i]);
+    sl.Text := jd.FormatJSON;
+    sl.SaveToFile(GLJsonFile, TEncoding.UTF8);
   finally
     sl.Free;
+    jd.Free;
+  end;
+end;
+
+procedure TGrpEdit.FormCreate(Sender: TObject);
+var
+  gltxt: string;
+begin
+  gltxt      := ExtractFilePath(Application.ExeName) + 'grplist.txt';
+  GLJsonFile := ExtractFilePath(Application.ExeName) + 'grplist.json';
+
+  if FIleExists(GLJsonFile) then
+    LoadGLJSON
+  // jsonファイルがなくgrplist.txtファイルがある場合はgrplist.txtを
+  // 読み込んでjsonファイルを作成する
+  else if FileExists(gltxt) then
+  begin
+    LoadGLTxt(gltxt);
+  end;
+end;
+
+procedure TGrpEdit.OKBtnClick(Sender: TObject);
+var
+  fn, c1, c2: string;
+  sl: TStringList;
+  i, n: integer;
+  ini: TJSONIni;
+  jo: TJSONObject;
+  jd: TJSONData;
+begin
+  ini := TJSONIni.Create;
+  jo  := TJSONObject.Create;
+  sl  := TStringList.Create;
+  jd  := jo;
+  try
+    fn := ExtractFilePath(ini.FileName) + 'grplist.json';
+    jo.Add('CHGroup', TJSONObject.Create);
+    for i := 0 to GrpEdit.RowCount - 1 do
+    begin
+      n := 1;
+      c1 := GrpEdit.Cells[0, i];
+      c2 := c1;
+      if jo.Objects['CHGroup'].Find(c1) <> nil then
+      begin
+        repeat
+          c2 := c1 + '(' + IntToStr(n) + ')';
+          Inc(n);
+        until jo.Objects['CHGroup'].Find(c2) = nil;
+      end;
+      jo.Objects['CHGroup'].Add(c2, GrpEdit.Cells[1, i]);
+    end;
+    sl.Text := jd.FormatJSON;
+    sl.SaveToFile(fn, TEncoding.utf8);
+  finally
+    sl.Free;
+    jo.Free;
+    ini.Free;
   end;
   ModalResult := mrOK;
-  //Close;
 end;
 
 procedure TGrpEdit.UpBtnClick(Sender: TObject);

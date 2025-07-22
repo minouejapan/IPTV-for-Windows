@@ -16,10 +16,10 @@
     </General>
     <VersionInfo>
       <UseVersionInfo Value="True"/>
-      <MajorVersionNr Value="1"/>
-      <MinorVersionNr Value="8"/>
+      <MajorVersionNr Value="2"/>
+      <MinorVersionNr Value="2"/>
       <Language Value="0411"/>
-      <StringTable Comments="MITライセンス" FileDescription="IPTV for Windows" InternalName="lazIPTV" LegalCopyright="INOUE, masahiro" LegalTrademarks="M&amp;I Soft" OriginalFilename="lazIPTV.exe" ProductName="lazIPTV" ProductVersion="1.8"/>
+      <StringTable Comments="MITライセンス" FileDescription="IPTV for Windows" InternalName="lazIPTV" LegalCopyright="INOUE, masahiro" LegalTrademarks="M&amp;I Soft" OriginalFilename="lazIPTV.exe" ProductName="lazIPTV" ProductVersion="2.2"/>
     </VersionInfo>
     <BuildModes>
       <Item Name="Debug" Default="True"/>
@@ -28,7 +28,7 @@
           <Version Value="11"/>
           <PathDelim Value="\"/>
           <Target>
-            <Filename Value="lazIPTV"/>
+            <Filename Value="lib\$(TargetCPU)-$(TargetOS)\lazIPTV"/>
           </Target>
           <SearchPaths>
             <IncludeFiles Value="$(ProjOutDir)"/>
@@ -36,6 +36,8 @@
           </SearchPaths>
           <CodeGeneration>
             <SmartLinkUnit Value="True"/>
+            <TargetCPU Value="x86_64"/>
+            <TargetOS Value="win64"/>
             <Optimizations>
               <OptimizationLevel Value="3"/>
             </Optimizations>
@@ -100,13 +102,21 @@
         <Filename Value="epgunit.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit>
+      <Unit>
+        <Filename Value="epg_ch_id.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="initjson.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
     <Version Value="11"/>
     <PathDelim Value="\"/>
     <Target>
-      <Filename Value="lazIPTV"/>
+      <Filename Value="lib\$(TargetCPU)-$(TargetOS)\lazIPTV"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
@@ -125,6 +135,8 @@
         <StackChecks Value="True"/>
       </Checks>
       <VerifyObjMethodCallValidity Value="True"/>
+      <TargetCPU Value="x86_64"/>
+      <TargetOS Value="win64"/>
     </CodeGeneration>
     <Linking>
       <Debugging>

@@ -78,7 +78,7 @@
              'BS11-イレブン_jp',
              'NHK・BSP_jp',
              'BS日テレ_jp',
-             'S朝日_jp',
+             'BS朝日_jp',
              'BS-TBS_jp',
              'BSテレ東_jp',
              '',

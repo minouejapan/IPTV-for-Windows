@@ -105,7 +105,6 @@ object MainForm: TMainForm
         Height = 32
         Top = 5
         Width = 32
-        OnClick = Image1Click
         Picture.Data = {
           055449636F6EBE0E00000000010001003030000001000800A80E000016000000
           2800000030000000600000000100080000000000000000000000000000000000
@@ -285,6 +284,9 @@ object MainForm: TMainForm
       Font.Height = -21
       Font.Pitch = fpVariable
       Font.Quality = fqDraft
+      Items.Strings = (
+        ''
+      )
       ItemHeight = 34
       ParentFont = False
       Style = lbOwnerDrawFixed
@@ -305,6 +307,9 @@ object MainForm: TMainForm
       Font.Height = -21
       Font.Pitch = fpVariable
       Font.Quality = fqDraft
+      Items.Strings = (
+        ''
+      )
       ItemHeight = 34
       ParentFont = False
       Style = lbOwnerDrawFixed
