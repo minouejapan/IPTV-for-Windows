@@ -3,9 +3,10 @@
 Windows版のIPTVを作ってみました。
 Lazarusで作成したので安直にlazIPTVと名付けました。
 
-実行ファイルを作成するためには、Lazarus ver3.2以降とPasLibVlcPlayerパッケージライブラリとTRegExprが必要です。
+実行ファイルを作成するためには、Lazarus ver3.2以降とPasLibVlcPlayerパッケージライブラリとTRegExpr、拙作JSONIniFileが必要です。
 PasLibVlcPlayerはhttps://github.com/paweld/PasLibVlc
 TRegExprはhttps://github.com/andgineer/TRegExpr
+JSONIniFileはhttps://github.com/minouejapan/JSONIniFile
 から入手して下さい。
 
 
@@ -13,6 +14,7 @@ TRegExprはhttps://github.com/andgineer/TRegExpr
 
 lazIPTVの実行にはVLCライブラリが必要です。Windows環境にVLCメディアプレーヤーがインストールされていれば動作します。
 #### その他
+ver2.2からチャンネルグループリストと設定ファイルをJSONファイルに保存するようにしました。旧チャンネルグループリストGRPLIST.TXTからは自動的にgrplist.jsonファイルにコンバートします。
 ver1.4からオンライン上のプレイリストファイルを登録出来るようになりました。
 またgithub上で公開されているプレイリストはHTMLソースを解析してプレイリスト部分だけを抽出して使用します。
 
