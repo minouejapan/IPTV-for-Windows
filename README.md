@@ -4,6 +4,7 @@ Windows版のIPTVを作ってみました。
 Lazarusで作成したので安直にlazIPTVと名付けました。
 
 実行ファイルを作成するためには、Lazarus ver3.2以降とPasLibVlcPlayerパッケージライブラリとTRegExpr、拙作JSONIniFileが必要です。
+
 PasLibVlcPlayerはhttps://github.com/paweld/PasLibVlc
 
 TRegExprはhttps://github.com/andgineer/TRegExpr
