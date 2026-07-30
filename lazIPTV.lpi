@@ -17,9 +17,9 @@
     <VersionInfo>
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="2"/>
-      <MinorVersionNr Value="2"/>
+      <MinorVersionNr Value="3"/>
       <Language Value="0411"/>
-      <StringTable Comments="MITライセンス" FileDescription="IPTV for Windows" InternalName="lazIPTV" LegalCopyright="INOUE, masahiro" LegalTrademarks="M&amp;I Soft" OriginalFilename="lazIPTV.exe" ProductName="lazIPTV" ProductVersion="2.2"/>
+      <StringTable Comments="MITライセンス" FileDescription="IPTV for Windows" InternalName="lazIPTV" LegalCopyright="INOUE, masahiro" LegalTrademarks="M&amp;I Soft" OriginalFilename="lazIPTV.exe" ProductName="lazIPTV" ProductVersion="3"/>
     </VersionInfo>
     <BuildModes>
       <Item Name="Debug" Default="True"/>
@@ -67,6 +67,9 @@
     </RunParams>
     <RequiredPackages>
       <Item>
+        <PackageName Value="bgracontrols"/>
+      </Item>
+      <Item>
         <PackageName Value="mbColorLibLaz"/>
       </Item>
       <Item>
@@ -100,14 +103,6 @@
       </Unit>
       <Unit>
         <Filename Value="epgunit.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit>
-      <Unit>
-        <Filename Value="epg_ch_id.inc"/>
-        <IsPartOfProject Value="True"/>
-      </Unit>
-      <Unit>
-        <Filename Value="initjson.inc"/>
         <IsPartOfProject Value="True"/>
       </Unit>
     </Units>

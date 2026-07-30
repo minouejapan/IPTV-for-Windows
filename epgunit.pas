@@ -1,4 +1,5 @@
 //
+// 2026/07/27 EPGファイルがgzファイルの場合の処理を追加
 //  EPGリスト処理
 //
 unit epgunit;
@@ -12,7 +13,7 @@ interface
 
 uses
 {$IFDEF FPC}
-  Classes, SysUtils, DateUtils, LazUTF8,
+  Classes, SysUtils, DateUtils, LazUTF8, ZStream,
 {$ELSE}
   System.Classes, System.SysUtils, System.DateUtils, LazUTF8wrap,
 {$ENDIF}
@@ -36,10 +37,33 @@ var
   EPGurl,
   EPGxml: string;
 
-{$I epg_ch_id.inc}  // EPG ID置換テーブル
+// {$I epg_ch_id.inc}  // EPG ID置換テーブル
 
 implementation
 
+
+// gzファイルの展開処理
+function ExtractGZ(const SourceFile: string): string;
+var
+  GZStream: TGZFileStream;
+  DestStream: TStringStream;
+begin
+  Result := '';
+  GZStream := TGZFileStream.Create(SourceFile, gzOpenRead);
+  try
+    DestStream := TStringStream.Create('', TEncoding.UTF8);
+    try
+      GZStream.Position := 0;
+      DestStream.CopyFrom(GZStream, 0);
+      DestStream.Position := 0;
+      Result := DestStream.ReadString(DestStream.Size);
+    finally
+      DestStream.Free;
+    end;
+  finally
+    GZStream.Free;
+  end;
+end;
 
 // WinINetを用いたHTMLファイルのダウンロード
 function LoadFromHTML(URLadr: string): string;
@@ -52,7 +76,7 @@ var
   RBuff       : TMemoryStream;
   TBuff       : TStringList;
   dwTimeOut   : DWORD;
-  ua          : string;
+  ua, tp, fn  : string;
 begin
   Result   := '';
               // ユーザエージェントをEdgeに設定する
@@ -86,15 +110,27 @@ begin
         finally
           FreeMem(lpBuffer);
         end;
-        TBuff := TStringList.Create;
-        try
+        // URLadrがgzファイルを示していた場合(Lazarus環境限定)
+        if LowerCase(ExtractFileExt(URLadr)) = '.gz' then
+        begin
+        {$IFDEF FPC}
+          tp := GetTempDir(False);
+          fn := tp + ExtractFileName(URLadr);
           RBuff.Position := 0;
-          TBuff.LoadFromStream(RBuff, TEncoding.UTF8);
-          Result := TBuff.Text;
-        finally
-          TBuff.Free;
-        end;
-      finally
+          RBuff.SaveToFile(fn);
+          Result := ExtractGZ(fn);
+        {$ENDIF}
+				end else begin
+				  TBuff := TStringList.Create;
+          try
+            RBuff.Position := 0;
+            TBuff.LoadFromStream(RBuff, TEncoding.UTF8);
+            Result := TBuff.Text;
+          finally
+            TBuff.Free;
+          end;
+				end;
+			finally
         RBuff.Free;
       end;
     end;
@@ -125,7 +161,7 @@ begin
   // 正規表現による処理に変更した(2024/3/9)
   r := TRegExpr.Create;
   try
-    r.Expression  := '&#.*?;';
+    r.Expression  := '&#\w.*?;';
     r.InputString := tmp;
     if r.Exec then
     begin
@@ -168,17 +204,6 @@ var
 begin
   Result.PlaneID := aID;
   Result.QuotedUD:= QuoteRegExprMetaChars(aID);
-  for i := 0 to Length(ID_Org) - 1 do
-  begin
-    if aID = ID_Org[i] then
-    begin
-      pid := EPG_ID[i];
-      qid := QuoteRegExprMetaChars(pid); // IDに正規表現のメタ文字が含まれている場合\でescapeする
-      Result.PlaneID := pid;
-      Result.QuotedUD:= qid;
-      Break;
-    end;
-  end;
 end;
 
 function GetEPGGuide(aID: string; PTime: TDateTime): TVGuide;
@@ -256,9 +281,7 @@ begin
             exp := r2.Match[0];
             exp := ReplaceRegExpr('</desc>', ReplaceRegExpr('<desc lang="ja">', exp, ''), '');
           end;
-          Result.Title       := UTF8Copy(Trim(Restore2RealChar(ttl)) +
-                                //'●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●', 1, 40);
-                                '　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　', 1, 40);
+          Result.Title       := Trim(Restore2RealChar(ttl));
           Result.Description := Restore2RealChar(exp);
           Result.StartT      := st;
           Result.EndT        := et;

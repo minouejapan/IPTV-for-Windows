@@ -10,6 +10,8 @@ object MainForm: TMainForm
   ClientWidth = 900
   Color = 2236962
   KeyPreview = True
+  Position = poDesktopCenter
+  LCLVersion = '4.8.0.0'
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDblClick = VLCDblClick
@@ -17,7 +19,6 @@ object MainForm: TMainForm
   OnMouseMove = FormMouseMove
   OnResize = FormResize
   OnShow = FormShow
-  Position = poDesktopCenter
   object MenuPanel: TPanel
     Left = 526
     Height = 474
@@ -62,10 +63,10 @@ object MainForm: TMainForm
         Font.Pitch = fpVariable
         Font.Quality = fqDraft
         Font.Style = [fsBold]
-        OnClick = CloseBtnClick
         ShowHint = True
         ParentFont = False
         ParentShowHint = False
+        OnClick = CloseBtnClick
       end
       object ListOpenBtn: TSpeedButton
         Left = 292
@@ -81,10 +82,10 @@ object MainForm: TMainForm
         Font.Name = 'Segoe MDL2 Assets'
         Font.Pitch = fpVariable
         Font.Quality = fqDraft
-        OnClick = ListOpenBtnClick
         ShowHint = True
         ParentFont = False
         ParentShowHint = False
+        OnClick = ListOpenBtnClick
       end
       object Label1: TLabel
         Left = 48
@@ -263,10 +264,10 @@ object MainForm: TMainForm
         Font.Name = 'Segoe MDL2 Assets'
         Font.Pitch = fpVariable
         Font.Quality = fqDraft
-        OnClick = PLexportClick
         ShowHint = True
         ParentFont = False
         ParentShowHint = False
+        OnClick = PLexportClick
       end
     end
     object CateList: TListBox
@@ -337,8 +338,8 @@ object MainForm: TMainForm
         Width = 298
         Frequency = 10
         Max = 150
-        OnChange = VolBarChange
         Position = 100
+        OnChange = VolBarChange
         Color = 3487029
         ParentColor = False
         TabOrder = 0
@@ -385,10 +386,10 @@ object MainForm: TMainForm
         Font.Name = 'Segoe MDL2 Assets'
         Font.Pitch = fpVariable
         Font.Quality = fqDraft
-        OnClick = MuteBtnClick
         ShowHint = True
         ParentFont = False
         ParentShowHint = False
+        OnClick = MuteBtnClick
       end
     end
   end
@@ -422,6 +423,21 @@ object MainForm: TMainForm
       Font.Quality = fqDraft
       ParentFont = False
       OnMouseDown = CaptPanelMouseDown
+    end
+    object WinMode: TSpeedButton
+      Left = 868
+      Height = 28
+      Top = 1
+      Width = 28
+      Caption = ''
+      Font.CharSet = ANSI_CHARSET
+      Font.Color = clWhite
+      Font.Height = -19
+      Font.Name = 'Segoe MDL2 Assets'
+      Font.Pitch = fpVariable
+      Font.Quality = fqDraft
+      ParentFont = False
+      OnClick = WinModeClick
     end
   end
   object VLC: TPasLibVlcPlayer

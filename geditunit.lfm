@@ -1,11 +1,11 @@
 object GrpEdit: TGrpEdit
   Left = 327
-  Height = 399
+  Height = 434
   Top = 250
   Width = 793
   BorderStyle = bsNone
   Caption = 'GrpEdit'
-  ClientHeight = 399
+  ClientHeight = 434
   ClientWidth = 793
   Color = 3355443
   Font.CharSet = SHIFTJIS_CHARSET
@@ -14,14 +14,15 @@ object GrpEdit: TGrpEdit
   Font.Pitch = fpVariable
   Font.Quality = fqDraft
   KeyPreview = True
+  Position = poMainFormCenter
+  LCLVersion = '4.8.0.0'
   OnCreate = FormCreate
   OnKeyPress = FormKeyPress
-  Position = poMainFormCenter
   object OKBtn: TSpeedButton
-    Left = 716
+    Left = 712
     Height = 34
     Hint = '編集を保存して終了する'
-    Top = 356
+    Top = 391
     Width = 70
     Caption = ''
     Flat = True
@@ -32,16 +33,16 @@ object GrpEdit: TGrpEdit
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
     Font.Style = [fsBold]
-    OnClick = OKBtnClick
     ShowHint = True
     ParentFont = False
     ParentShowHint = False
+    OnClick = OKBtnClick
   end
   object CancelBtn: TSpeedButton
-    Left = 644
+    Left = 628
     Height = 34
     Hint = '編集を破棄して終了する'
-    Top = 356
+    Top = 391
     Width = 66
     Caption = ''
     Flat = True
@@ -52,10 +53,10 @@ object GrpEdit: TGrpEdit
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
     Font.Style = [fsBold]
-    OnClick = CancelBtnClick
     ShowHint = True
     ParentFont = False
     ParentShowHint = False
+    OnClick = CancelBtnClick
   end
   object GrpEdit: TStringGrid
     Left = 20
@@ -107,10 +108,10 @@ object GrpEdit: TGrpEdit
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
     Font.Style = [fsBold]
-    OnClick = AddBtnClick
     ShowHint = True
     ParentFont = False
     ParentShowHint = False
+    OnClick = AddBtnClick
   end
   object DelBtn: TSpeedButton
     Left = 752
@@ -128,10 +129,10 @@ object GrpEdit: TGrpEdit
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
     Font.Style = [fsBold]
-    OnClick = DelBtnClick
     ShowHint = True
     ParentFont = False
     ParentShowHint = False
+    OnClick = DelBtnClick
   end
   object BrsBtn: TSpeedButton
     Left = 752
@@ -149,16 +150,16 @@ object GrpEdit: TGrpEdit
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
     Font.Style = [fsBold]
-    OnClick = BrsBtnClick
     ShowHint = True
     ParentFont = False
     ParentShowHint = False
+    OnClick = BrsBtnClick
   end
   object Label1: TLabel
     Left = 20
     Height = 25
     Top = 9
-    Width = 190
+    Width = 188
     Caption = 'TVチャンネルグループ編集'
     Font.CharSet = SHIFTJIS_CHARSET
     Font.Color = clWhite
@@ -183,10 +184,10 @@ object GrpEdit: TGrpEdit
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
     Font.Style = [fsBold]
-    OnClick = UpBtnClick
     ShowHint = True
     ParentFont = False
     ParentShowHint = False
+    OnClick = UpBtnClick
   end
   object DwnBtn: TSpeedButton
     Left = 752
@@ -204,17 +205,17 @@ object GrpEdit: TGrpEdit
     Font.Pitch = fpVariable
     Font.Quality = fqDraft
     Font.Style = [fsBold]
-    OnClick = DwnBtnClick
     ShowHint = True
     ParentFont = False
     ParentShowHint = False
+    OnClick = DwnBtnClick
   end
   object Label2: TLabel
-    Left = 20
+    Left = 16
     Height = 21
-    Top = 360
-    Width = 63
-    Caption = 'EPGサイト'
+    Top = 400
+    Width = 78
+    Caption = 'EPGサイト：'
     Font.CharSet = SHIFTJIS_CHARSET
     Font.Color = clWhite
     Font.Height = -16
@@ -223,10 +224,10 @@ object GrpEdit: TGrpEdit
     ParentFont = False
   end
   object EPGurl: TEdit
-    Left = 88
+    Left = 104
     Height = 29
     Hint = 'EPGリストサイトURLを指定する'
-    Top = 356
+    Top = 396
     Width = 268
     Color = 4144959
     Font.CharSet = SHIFTJIS_CHARSET
@@ -238,23 +239,22 @@ object GrpEdit: TGrpEdit
     ParentShowHint = False
     ShowHint = True
     TabOrder = 1
-    Text = 'http://epg.utako.moe/jcom.xml'
   end
   object EPGsw: TCDCheckBox
-    Left = 552
+    Left = 16
     Height = 21
     Hint = 'チェックするとCHガイド表示を無効にする'
-    Top = 361
+    Top = 364
     Width = 79
     DrawStyle = dsDefault
     Caption = 'EPG有効'
   end
   object EPGColor: TColorBox
-    Left = 366
+    Left = 400
     Height = 26
     Hint = 'CH]ガイド表示色を指定する'
-    Top = 358
-    Width = 100
+    Top = 395
+    Width = 116
     ColorRectOffset = 2
     Selected = clWhite
     Style = [cbStandardColors]
@@ -267,9 +267,9 @@ object GrpEdit: TGrpEdit
     TabOrder = 3
   end
   object MkFSize: TSpinEdit
-    Left = 476
+    Left = 532
     Height = 28
-    Top = 358
+    Top = 395
     Width = 56
     Color = 4144959
     Font.CharSet = SHIFTJIS_CHARSET
@@ -282,6 +282,21 @@ object GrpEdit: TGrpEdit
     ParentFont = False
     TabOrder = 4
     Value = 32
+  end
+  object IsPlayList: TCDCheckBox
+    Left = 105
+    Height = 21
+    Top = 364
+    Width = 167
+    DrawStyle = dsDefault
+    Caption = 'プレイリストから取得する'
+  end
+  object Label3: TLabel
+    Left = 404
+    Height = 21
+    Top = 364
+    Width = 122
+    Caption = '表示フォントの設定'
   end
   object OD: TOpenDialog
     Title = 'プレイリストファイルを選択する'

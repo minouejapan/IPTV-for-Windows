@@ -2,6 +2,11 @@
 
   lazIPTV
 
+  ver2.3  2026/07/29  チャンネル識別IDの置換処理を廃止した
+                      EPGリストがgzファイルの場合は展開してxmlファイルを取る出すようにした(Lazarus限定)
+                      EPGサイトURLをプレイリストから取得する機能を追加した
+                      旧チャンネルリストファイルをJSONファイルに変換する処理を削除した
+                      TRegExprを最新版に更新した(ExecNextから抜け出せない不具合が解消した)
   ver2.2  2025/07/22  初期化時にメモリアクセス違反が出る場合があった不具合を修正した
                       設定ファイルをIniファイルからJSONファイルに変更した
                       チャンネルグループリストをテキストファイルからJSONファイルに変更した
@@ -47,8 +52,7 @@ uses
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Buttons, Vcl.ComCtrls, Vcl.Menus,
   LazUTF8wrap,
 {$ENDIF}
-  IniFiles, Windows, ActiveX, ShlObj, ClipBrd, PasLibVlcPlayerUnit, RegExpr,
-  WinInet;
+  Windows, ClipBrd, PasLibVlcPlayerUnit, RegExpr, WinInet;
 
 type
   TCHGroup = record
@@ -64,6 +68,7 @@ type
     GrpSelect: TComboBox;
     Image1: TImage;
     Label1: TLabel;
+		WinMode: TSpeedButton;
     TVTitle: TLabel;
     VLC: TPasLibVlcPlayer;
     PLexport: TSpeedButton;
@@ -98,6 +103,7 @@ type
     procedure FormShow(Sender: TObject);
     procedure GrpSelectSelect(Sender: TObject);
     procedure MnuCopyClick(Sender: TObject);
+		procedure WinModeClick(Sender: TObject);
     procedure VLCClick(Sender: TObject);
     procedure VLCDblClick(Sender: TObject);
     procedure CloseBtnClick(Sender: TObject);
@@ -116,9 +122,10 @@ type
     ChURL: array of string;     // CH名に対応したストリーム再生URL
     GrpList: array of string;   // グループ名
     ChID: array of string;      // EPGデータ取得用チャンネルID
+    PL_EPG: string;             // プレイリストのEPGアドレス
     Ini: TJSONIni;
     PlainM3u: string;
-    EPGSW: boolean;
+    EPGSW, EPGbyPL: boolean;
     MkColor,
     MkFSize: integer;
     CHGroup: array of TCHGroup;
@@ -138,8 +145,6 @@ uses
   GEditUnit, EPGunit, tvgunit;
 
 {$R *.lfm}
-
-{$I initjson.inc}
 
 { TMainForm }
 
@@ -248,12 +253,13 @@ begin
         r := TRegExpr.Create;
         try
           r.InputString := fs.Text;
-          r.Expression  := '#EXTM3U url-tvg=".*?" tvg-shift=';
+          r.Expression  := 'url-tvg=".*?"';
           if r.Exec then
           begin
             Tvg := r.Match[0];
-            Tvg := ReplaceRegExpr('" tvg-shift=', ReplaceRegExpr('#EXTM3U url-tvg="', Tvg, ''), '');
-            Tvg := ReplaceRegExpr(',.*?xml', Tvg, '');
+            Tvg := ReplaceRegExpr('url-tvg="', Tvg, '');
+            Tvg := ReplaceRegExpr('"', Tvg, '');
+            PL_EPG := Tvg;
           end;
           fs.Delete(0);
         finally
@@ -381,6 +387,7 @@ begin
   Ini.WriteStr('Options',   'EPG_URL',  EPGurl);
   Ini.WriteInt('Options',   'MkFSize',  MkFSize);
   Ini.WriteBool('Options',  'EPG_ON',   EPGsw);
+  Ini.WriteBool('Options',  'EPG_PL',   EPGbyPL);
 
   if GrpSelect.ItemIndex > -1 then
     Ini.WriteInt('Options', 'GroupIndex', GrpSelect.ItemIndex);
@@ -409,11 +416,13 @@ begin
     VLC.Play(url);
     VLC.SetAudioVolume(VolBar.Position);
     VolValue.Caption :=IntToStr(VolBar.Position);
-    if EPGSW then
+    if EPGSW or EPGbyPL then
       URLLabel.Caption := '番組情報を取得中...お待ちください...';
     Application.ProcessMessages;
-    if EPGSW then
+    if EPGSW or EPGbyPL then
     begin
+      if EPGbyPL and (PL_EPG <> '') then
+        EPGurl :=  PL_EPG;
       TVg := GetEPGGuide(Chid[i], Now);
       // EPGデータを取得出来なかった
       if TVg.Title = '' then
@@ -423,9 +432,8 @@ begin
       end else begin
         st  := FormatDateTime('hh:nn', TVg.StartT);
         et  := FormatDateTime('hh:nn', TVg.EndT);
-        ttl := ChList.Items[i] +  ' [' + st + ' - ' + et + '] ' +  TVg.Title;
+        ttl := Trim(ChList.Items[i] +  ' [' + st + ' - ' + et + '] ' +  TVg.Title);
         TVTitle.Caption := ttl;
-        VLC.MarqueeSetColor(MarqueeColor[MkColor]);
         VLC.MarqueeShowText(ttl, 10, 10, MarqueeColor[MkColor], MkFSize, 255, 5000);
       end;
       URLLabel.Caption := url;
@@ -562,12 +570,14 @@ begin
   fn := ExtractFilePath(Ini.FileName) + 'grplist.json';
   tx := ExtractFilePath(Ini.FileName) + 'grplist.txt';
   // GRPLIST.TXTがあってGRPLIST.JSONがない場合はGRPLIST.TXTをGRPLIST.JSONにコンバートする
+{
   if not FileExists(fn) and FileExists(tx) then
   begin
     ge := TGrpEdit.Create(Self);
     ge.JsonConverter;
     ge.Free;
   end;
+}
   if FileExists(fn) then
   begin
     sl := TStringList.Create;
@@ -628,11 +638,12 @@ begin
   EpgURL  := Ini.ReadStr('Options', 'EPG_URL',  'https://github.com/karenda-jp/etc/raw/refs/heads/main/guides.xml');
   MkFSize := Ini.ReadInt('Options', 'MkFSize',  32);
   EPGsw   := Ini.ReadBool('Options','EPG_ON',   False);
+  EPGbyPL := Ini.ReadBool('Options','EPG_PL',   False);
 
   // lazIPTVと同じフォルダ内にGRPLIST.TXTがあればグループリストとして
   // プレイリストが登録されていれば読み込む
   M3uFile := LoadGroupList;
-  if (M3uFile <> '') and FileExists(M3uFile) then
+  if FileExists(M3uFile) then
   begin
     LoadCHList(M3ufile);
     PLexport.Enabled := False;
@@ -796,6 +807,15 @@ begin
   ClipBoard.AsText := URLlabel.Caption;
 end;
 
+procedure TMainForm.WinModeClick(Sender: TObject);
+begin
+  if FullScrMode then
+    WinMode.Caption := ''
+  else
+    WinMode.Caption := '';
+  VLCDblClick(Self);
+end;
+
 procedure TMainForm.VLCClick(Sender: TObject);
 begin
   if EPGSW then
@@ -837,15 +857,17 @@ begin
   ge := TGrpEdit.Create(Self);
   try
     ge.EPGurl.Text  := EPGurl;
-    ge.MkFSize.Value:= MkFSize;
-    ge.EPGColor.Selected:= WindowsColor[MkColor];
-    ge.EPGsw.Checked:= EPGsw;
+    ge.MkFSize.Value := MkFSize;
+    ge.EPGColor.Selected := WindowsColor[MkColor];
+    ge.EPGsw.Checked := EPGsw;
+    ge.IsPlayList.Checked := EPGbyPL;
     if ge.ShowModal = mrOK then
     begin
       EPGurl  := ge.EPGurl.Text;
       MkFSize := ge.MkFSize.Value;
       MkColor := ge.EPGColor.ItemIndex;
       EPGsw   := ge.EPGsw.Checked;
+      EPGbyPL := ge.IsPlayList.Checked;
       m3u     := LoadGroupList;
       if FileExists(m3u) then
         LoadCHList(m3u)
@@ -855,35 +877,9 @@ begin
         if m3u <> '' then
           LoadChList(m3u);
       end else begin
-        sl := TStringList.Create;
-        try
-          sl.Text := JGRPLST;
-          sl.SaveToFile(ExtractFilePath(Application.ExeName) + 'grplist.json', TEncoding.UTF8);
-          sl.Text := SMPLM3U;
-          sl.SaveToFile(ExtractFilePath(Application.ExeName) + 'sample.m3u', TEncoding.UTF8);
-          LoadCHList(m3u);
-          i := 0;
-        finally
-          sl.Free;
-        end;
-      end;
+       end;
       GrpSelect.ItemIndex := i;
       GrpSelectSelect(nil);
-    end else begin
-      sl := TStringList.Create;
-      try
-        sl.Text := JGRPLST;
-        sl.SaveToFile(ExtractFilePath(Application.ExeName) + 'grplist.json', TEncoding.UTF8);
-        sl.Text := SMPLM3U;
-        m3u := ExtractFilePath(Application.ExeName) + 'sample.m3u';
-        sl.SaveToFile(m3u, TEncoding.UTF8);
-        LoadCHList(m3u);
-        PLexport.Enabled := True;
-        PLexport.Font.Color := clWhite;
-        i := 0;
-      finally
-        sl.Free;
-      end;
     end;
   finally
     ge.Free;

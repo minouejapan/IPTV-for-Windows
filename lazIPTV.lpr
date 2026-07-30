@@ -1,6 +1,9 @@
 program lazIPTV;
 
-{$mode objfpc}{$H+}
+{$IFDEF FPC}
+  {$MODE Delphi}
+  {$codepage utf8}
+{$ENDIF}
 
 uses
   {$IFDEF UNIX}
@@ -17,7 +20,7 @@ uses
 
 begin
   RequireDerivedFormResource:=True;
-  Application.Scaled:=True;
+			Application.Scaled:=True;
   Application.Initialize;
   Application.CreateForm(TMainForm, MainForm);
   Application.Run;

@@ -17,10 +17,12 @@ uses
 type
   { TGrpEdit }
   TGrpEdit = class(TForm)
+    IsPlayList: TCDCheckBox;
     EPGColor: TColorBox;
     EPGsw: TCDCheckBox;
     EPGurl: TEdit;
     Label2: TLabel;
+    Label3: TLabel;
     MkFSize: TSpinEdit;
     UpBtn: TSpeedButton;
     DwnBtn: TSpeedButton;
@@ -46,12 +48,10 @@ type
     procedure UpBtnClick(Sender: TObject);
   private
     GLJsonFile: string;                 // CHグループリストJSONファイル名
-    procedure LoadGLTxt(GLTxt: string); // 旧バージョン用CHグループリストテキストファイル読み込み
     procedure LoadGLJson;               // CHグループリストJSONファイル読み込み
     procedure SaveGLJson;
   public
     MkColor: integer;
-    procedure JsonConverter;            // GRPLIST.TXTをgrplist.jsonファイルにコンバートする
   end;
 
 const
@@ -95,15 +95,6 @@ implementation
 
 
 { TGrpEdit }
-
-// ver2.2限定
-// CHグループリストをGRPLIST.TXTからgrplist.jsonに変更したことに伴い、
-// ver2.2を起動した初回だけ実行してファイルをコンバートする
-procedure TGrpEdit.JsonConverter;
-begin
-  LoadGLTxt(ExtractFilePath(Application.ExeName) + 'grplist.txt');
-  OKBtnClick(nil);
-end;
 
 procedure TGrpEdit.FormKeyPress(Sender: TObject; var Key: char);
 begin
@@ -202,64 +193,6 @@ begin
   end;
 end;
 
-procedure TGrpEdit.LoadGLTxt(GLTxt: string);
-var
-  s, ep: string;
-  s1, s2, s3: TStringList;
-  i, n, cl, j: integer;
-begin
-  if FileExists(GLTxt) then
-  begin
-    s1 := TStringList.Create;
-    s2 := TStringList.Create;
-    s3 := TStringList.Create;
-    s2.Delimiter := ',';
-    s2.StrictDelimiter := True;
-    try
-      s1.LoadFromFile(GLTxt, TEncoding.UTF8);
-      if s1.Count > 0 then
-      begin
-        GrpEdit.RowCount := s1.Count;
-        n := 0;
-        for i := 0 to s1.Count - 1 do
-        begin
-          s := s1.Strings[i];
-          if UTF8Pos('$', s) = 1 then
-          begin
-            ep := Copy(s, 2, UTF8Length(s));
-            s3.CommaText := ep;
-            EPGurl.Text := s3.Strings[0];
-            if s3.Count > 1 then
-              EPGsw.Checked := s3.Strings[1] = '1'
-            else
-              EPGsw.Checked := True;
-            if s3.Count > 2 then
-            begin
-              cl := StrToInt(s3.Strings[2]);
-              for j := 0 to 15 do
-                if cl = MarqueeColor[j] then
-                begin
-                  EPGColor.Selected := WindowsColor[j];
-                  Break;
-                end;
-            end;
-            GrpEdit.RowCount := s1.Count - 1;
-          end else begin
-            s2.CommaText := s;
-            GrpEdit.Cells[0, n] := s2.Strings[0];
-            GrpEdit.Cells[1, n] := s2.Strings[1];
-            Inc(n);
-          end;
-        end;
-      end;
-    finally
-      s1.Free;
-      s2.Free;
-      s3.Free;
-    end;
-  end;
-end;
-
 procedure TGrpEdit.LoadGLJson;
 var
   item, value: string;
@@ -315,20 +248,11 @@ begin
 end;
 
 procedure TGrpEdit.FormCreate(Sender: TObject);
-var
-  gltxt: string;
 begin
-  gltxt      := ExtractFilePath(Application.ExeName) + 'grplist.txt';
   GLJsonFile := ExtractFilePath(Application.ExeName) + 'grplist.json';
 
   if FIleExists(GLJsonFile) then
     LoadGLJSON
-  // jsonファイルがなくgrplist.txtファイルがある場合はgrplist.txtを
-  // 読み込んでjsonファイルを作成する
-  else if FileExists(gltxt) then
-  begin
-    LoadGLTxt(gltxt);
-  end;
 end;
 
 procedure TGrpEdit.OKBtnClick(Sender: TObject);
