@@ -245,7 +245,6 @@ object MainForm: TMainForm
         Style = csOwnerDrawFixed
         TabOrder = 0
         Visible = False
-        OnChange = GrpSelectChange
         OnDrawItem = GrpSelectDrawItem
         OnSelect = GrpSelectSelect
       end

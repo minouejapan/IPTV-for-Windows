@@ -2,6 +2,8 @@
 
   lazIPTV
 
+  ver2.4  2026/11/23  プレイリスト読み込み処理を書き換えてリファラ指定にも対応するようにした
+  ver2.31 2026/08/02  プレイリストにグループIDがない場合にCH名に"group-title=なし"が付加される不具合を修正した
   ver2.3  2026/07/30  チャンネル識別IDの置換処理を廃止した
                       EPGリストがgzファイルの場合は展開してxmlファイルを取る出すようにした(Lazarus限定)
                       EPGサイトURLをプレイリストから取得する機能を追加した
@@ -52,13 +54,18 @@ uses
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Buttons, Vcl.ComCtrls, Vcl.Menus,
   LazUTF8wrap,
 {$ENDIF}
-  Windows, ClipBrd, PasLibVlcPlayerUnit, RegExpr, WinInet;
+  Windows, ClipBrd, PasLibVlcPlayerUnit, RegExpr, WinInet, LoadM3U;
 
 type
   TCHGroup = record
     CHName,
     PlayList: string;
   end;
+  TCHInfo = record
+    Name,             // チャンネル名称
+    strmURL,          // ストリームURL
+    Referrer: string; // リファラ(参照元)URL
+	end;
 
   { TMainForm }
   TMainForm = class(TForm)
@@ -88,12 +95,12 @@ type
       Shift: TShiftState; X, Y: Integer);
     procedure CateListDrawItem(Control: TWinControl; Index: Integer;
       ARect: TRect; State: TOwnerDrawState);
+		procedure CateListResize(Sender: TObject);
     procedure CateListSelectionChange(Sender: TObject; User: boolean);
     procedure ChListDrawItem(Control: TWinControl; Index: Integer;
       ARect: TRect; State: TOwnerDrawState);
     procedure ChListSelectionChange(Sender: TObject; User: boolean);
     procedure FormMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
-    procedure GrpSelectChange(Sender: TObject);
     procedure GrpSelectDrawItem(Control: TWinControl; Index: Integer;
       ARect: TRect; State: TOwnerDrawState);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
@@ -118,8 +125,6 @@ type
     AbortFlag: Boolean;
     MXO, MXC, CYO: integer;
     M3uFile: string;
-    TVChList: array of string;  // グループ名,CH名#9URL,CH名|URL,CH名 URL,....
-    ChURL: array of string;     // CH名に対応したストリーム再生URL
     GrpList: array of string;   // グループ名
     ChID: array of string;      // EPGデータ取得用チャンネルID
     PL_EPG: string;             // プレイリストのEPGアドレス
@@ -129,10 +134,8 @@ type
     MkColor,
     MkFSize: integer;
     CHGroup: array of TCHGroup;
-    procedure LoadCHList(FileName: string);
+    CHInfo: array of TCHInfo;
     function LoadGroupList: string;
-    function GetOnlineList(aURL: string): string;
-    function LoadOnlineM3u(aURL: string): string;
   public
   end;
 
@@ -147,237 +150,6 @@ uses
 {$R *.lfm}
 
 { TMainForm }
-
-// WinINetを用いたHTMLファイルのダウンロード
-function LoadFromHTML(URLadr: string): string;
-var
-  hSession    : HINTERNET;
-  hService    : HINTERNET;
-  dwBytesRead : DWORD;
-  dwFlag      : DWORD;
-  lpBuffer    : PChar;
-  RBuff       : TMemoryStream;
-  TBuff       : TStringList;
-  ua          : string;
-begin
-  Result   := '';
-              // ユーザエージェントをEdgeに設定する
-  ua       := 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36 Edg/79.0.309.65';
-  hSession := InternetOpen(PChar(ua), INTERNET_OPEN_TYPE_PRECONFIG, nil, nil, 0);
-
-  if Assigned(hSession) then
-  begin
-    dwFlag   := INTERNET_FLAG_RELOAD;
-    hService := InternetOpenUrl(hSession, PChar(URLadr), nil, 0, dwFlag, 0);
-    if Assigned(hService) then
-    begin
-      RBuff := TMemoryStream.Create;
-      try
-        lpBuffer := AllocMem(65536);
-        try
-          dwBytesRead := 65535;
-          while True do
-          begin
-            if InternetReadFile(hService, lpBuffer, 65535, dwBytesRead) then
-            begin
-              if dwBytesRead = 0 then
-                break;
-              RBuff.WriteBuffer(lpBuffer^, dwBytesRead);
-            end else
-              break;
-          end;
-        finally
-          FreeMem(lpBuffer);
-        end;
-        TBuff := TStringList.Create;
-        try
-          RBuff.Position := 0;
-          TBuff.LoadFromStream(RBuff, TEncoding.UTF8);
-          Result := TBuff.Text;
-        finally
-          TBuff.Free;
-        end;
-      finally
-        RBuff.Free;
-      end;
-    end;
-    InternetCloseHandle(hService);
-  end;
-end;
-
-function TMainForm.GetOnlineList(aURL: string): string;
-var
-  plist: TStringList;
-begin
-  PlainM3u := '';
-  Result := '';
-  plist := TStringList.Create;
-  try
-    plist.Text := LoadFromHTML(aURL);
-    if plist.Count > 2 then
-    begin
-      PlainM3u := plist.Text;
-      Result := ExtractFilePath(Ini.FileName) + 'playlist.m3u';
-      plist.SaveToFile(Result, TEncoding.UTF8);
-    end;
-  finally
-    plist.Free;
-  end;
-end;
-
-// プレイリストファイル(*.m3u,*.m3u8)を読み込んでチャンネル情報を登録する
-procedure TMainForm.LoadCHList(FileName: string);
-var
-  fs, ls, ld: TStringList;
-  i, j, idx, l: integer;
-  s, sc,
-  TVgrp, TVid, TVadr, Tvg, Gid: string;
-  r: TRegExpr;
-begin
-  SetLength(TVChList, 0);   //  CHリストをクリア
-  CateList.Clear;
-  ChList.Clear;
-  tvg := '';
-  fs := TStringList.Create;
-  ls := TStringList.Create; // #EXTINF行分解用
-  ld := TStringList.Create; // #EXTINFの最後のチャンネル名分離用(,だけで分離)
-  ld.Delimiter := ',';
-  ld.StrictDelimiter := True;;
-  try
-    fs.LoadFromFile(FileName, TEncoding.UTF8);
-    if fs.Count > 1 then
-    begin
-      s := Trim(fs.Strings[0]);
-      if Utf8Pos('#EXTM3U', s) = 1 then
-      begin
-        r := TRegExpr.Create;
-        try
-          r.InputString := fs.Text;
-          r.Expression  := 'url-tvg=".*?"';
-          if r.Exec then
-          begin
-            Tvg := r.Match[0];
-            Tvg := ReplaceRegExpr('url-tvg="', Tvg, '');
-            Tvg := ReplaceRegExpr('"', Tvg, '');
-            PL_EPG := Tvg;
-          end;
-          fs.Delete(0);
-        finally
-          r.Free;
-        end;
-      end;
-      i := 0;
-      while i <= fs.Count -1 do
-      begin
-        s := Trim(fs.Strings[i]);
-        // #EXTINF:ヘッダーがなければスキップする
-        if Utf8Pos('#EXTINF:', s) <> 1 then
-        begin
-          Inc(i);
-          Continue;
-        end;
-        if Utf8Pos('group-title=', s) = 0 then  // カテゴリーがない場合は空白カテゴリを挿入する
-          s := s + ' group-title=なし';
-        // チャンネルIDを取得する
-        if UTF8Pos('tvg-id="', s) > 0 then
-        begin
-          r := TRegExpr.Create;
-          try
-            r.InputString := s;
-            r.Expression  := 'tvg-id=".*?"';
-            if r.Exec then
-            begin
-              Gid := r.Match[0];
-              Gid := ReplaceRegExpr('"', ReplaceRegExpr('tvg-id="', Gid, ''), '');
-            end;
-          finally
-            r.Free;
-          end;
-        end;
-        s := UTF8StringReplace(s, '"', '', [rfReplaceAll]);
-        // ,の後ろにあるチャンネル名を分離する
-        TVid := '';
-        ld.CommaText := s;
-        if ld.Count = 2 then
-          TVid := ld.Strings[1];
-        // 要素を分ける
-        ls.CommaText := s;
-        for j := 0 to ls.Count - 1 do
-        begin
-          idx := -1;
-          sc := Trim(ls.Strings[j]);
-          // グループカテゴリーを抽出する
-          if Utf8Pos('group-title=', sc) > 0 then
-          begin
-            Utf8Delete(sc, 1, Length('group-title='));
-            TVgrp := sc;
-          end;
-           // チャンネルIDが取得出来ていなければtvg-name=から抽出する
-          if (TVid = '') and (Utf8Pos('tvg-name=', sc) = 1) then
-          begin
-            Utf8Delete(sc, 1, Length('tvg-name='));
-            TVid := sc;
-          // チャンネルIDの取得が出来なかった場合は登録をスキップする
-          end;
-          if TVid = '' then
-          begin
-            Inc(i);
-            Continue;
-          end;
-        end;
-        // URLを取得する
-        Inc(i);
-        TVadr := fs.Strings[i];
-        // 取得したグループ名、CH名、URLを登録する
-        l := Length(TVChList);
-        idx := -1;
-        // 未登録
-        if l = 0 then
-        begin
-          SetLength(TVChList, 1);
-          idx := 0;
-          TVChList[idx] := TVgrp;
-        // 既に何らかのグループ名が登録されている場合は
-        // TVgrpがその中に存在するかどうかチェックする
-        end else begin
-          for j := 0 to l - 1 do
-          begin
-            if Utf8Pos(TVgrp, TVChList[j]) = 1 then
-            begin
-              idx := j;
-              Break;
-            end;
-          end;
-          if idx = -1 then
-          begin
-            SetLength(TVChList, l + 1);
-            idx := l;
-            TVChList[idx] := TVgrp;
-          end;
-        end;
-        if Gid = '' then
-          Gid := 'DUMMY';
-        // CH名とURL間を'|'で連結して保存する
-        TVChList[idx] := TVChList[idx] + ',' + TVid + '|"' + TVadr + '"|"' + Gid + '"';
-      end;
-    end;
-    CateList.Items.Clear;
-    if Length(TVChList) > 0 then
-    begin
-      for i := 0 to Length(TVChList) - 1 do
-      begin
-        ld.CommaText := TVChList[i];
-        CateList.Items.Add(ld.Strings[0]);
-      end;
-      if CateList.Count > 0 then
-        CateList.ItemIndex := 0;
-    end;
-  finally
-    ld.Free;
-    ls.Free;
-    fs.Free;
-  end;
-end;
 
 procedure TMainForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
@@ -397,9 +169,11 @@ end;
 // チャンネル選択・再生処理
 procedure TMainForm.ChListSelectionChange(Sender: TObject; User: boolean);
 var
-  url, st, et, ttl: string;
+  url, reff: WideString;
+  st, et, ttl: string;
   tvg: TVGuide;
   i: integer;
+  opt: array[0..1] of WideString;
 begin
   inherited;
 
@@ -407,13 +181,22 @@ begin
   if i = -1 then
     Exit;
   // 選択したCHリストインデックスからURLを取得して再生する
-  url := ChURL[i];
+  url  := CHInfo[i].strmURL;
+  reff := CHInfo[i].Referrer;
   MenuOpen := False;
   URLLabel.Caption := url;
-  URLLabel.Hint := url;
+  URLLabel.Hint    := url;
   if url <> '' then
   begin
-    VLC.Play(url);
+    if reff <> '' then
+      opt[0] := ':http-referrer=' + reff
+    else
+      opt[0] := '';
+    if reff = '' then
+      URLLabel.Caption := url
+    else
+      URLLabel.Caption := url + '@' + reff;
+    VLC.Play(url, opt);
     VLC.SetAudioVolume(VolBar.Position);
     VolValue.Caption :=IntToStr(VolBar.Position);
     if EPGSW or EPGbyPL then
@@ -436,14 +219,8 @@ begin
         TVTitle.Caption := ttl;
         VLC.MarqueeShowText(ttl, 10, 10, MarqueeColor[MkColor], MkFSize, 255, 5000);
       end;
-      URLLabel.Caption := url;
     end;
   end;
-end;
-
-procedure TMainForm.GrpSelectChange(Sender: TObject);
-begin
-
 end;
 
 procedure TMainForm.GrpSelectDrawItem(Control: TWinControl; Index: Integer;
@@ -467,45 +244,29 @@ end;
 // 選択したグループカテゴリーの登録チャンネルをリストに登録・表示する
 procedure TMainForm.CateListSelectionChange(Sender: TObject; User: boolean);
 var
-  i: integer;
+  i, n, cn: integer;
   grp, chl: TStringList;
   s, ch: string;
 begin
-  if CateList.ItemIndex = -1 then
+  n := CateList.ItemIndex;
+  if n = -1 then
     Exit;
 
   ChList.Items.Clear;
-  SetLength(ChURL, 0);
-  grp := TStringList.Create;
-  chl := TStringList.Create;
-  try
-    grp.StrictDelimiter := True;
-    grp.Delimiter := ',';
-    chl.StrictDelimiter := True;
-    chl.Delimiter := ',';
-    s := TVChList[CateList.ItemIndex];
-    grp.CommaText := s;
-    SetLength(ChURL, grp.Count - 1);
-    SetLength(ChID, grp.Count - 1);
-    for i := 1 to grp.Count - 1 do
+  SetLength(CHInfo, 0);
+  cn := 0;
+  for i := 0 to Length(CHData) - 1 do
+  begin
+    if CHData[i].GroupID = n then
     begin
-      ch := grp.Strings[i];
-      ch := Utf8StringReplace(ch, '|', ',', [rfReplaceAll]);
-      chl.CommaText := ch;
-      if chl.Count < 2 then
-        Continue;
-      try
-        ChList.Items.Add(chl.Strings[0]);     // リストにCH名を登録
-        ChURL[i - 1]  := chl.Strings[1];      // URLリストにURLを登録
-        ChID[i - 1]   := chl.Strings[2];      // 番組情報取得用チャンネルID
-      except
-        ;
-      end;
-    end;
-  finally
-    grp.Free;
-    chl.Free;
-  end;
+      ChList.Items.Add(CHData[i].Name);
+      Inc(cn);
+      SetLength(CHInfo, cn);
+      CHInfo[cn - 1].Name     := CHData[i].Name;
+      CHInfo[cn - 1].strmURL  := CHData[i].URL;
+      CHInfo[cn - 1].Referrer := CHData[i].Referrer;
+		end;
+	end;
 end;
 
 // カテゴリーリストのカスタム描画
@@ -527,6 +288,10 @@ begin
   end;
 end;
 
+procedure TMainForm.CateListResize(Sender: TObject);
+begin
+
+end;
 // キャプションバーを掴んだらWindowをマウスで移動できるようにする
 procedure TMainForm.CaptPanelMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
@@ -570,14 +335,6 @@ begin
   fn := ExtractFilePath(Ini.FileName) + 'grplist.json';
   tx := ExtractFilePath(Ini.FileName) + 'grplist.txt';
   // GRPLIST.TXTがあってGRPLIST.JSONがない場合はGRPLIST.TXTをGRPLIST.JSONにコンバートする
-{
-  if not FileExists(fn) and FileExists(tx) then
-  begin
-    ge := TGrpEdit.Create(Self);
-    ge.JsonConverter;
-    ge.Free;
-  end;
-}
   if FileExists(fn) then
   begin
     sl := TStringList.Create;
@@ -643,34 +400,14 @@ begin
   // lazIPTVと同じフォルダ内にGRPLIST.TXTがあればグループリストとして
   // プレイリストが登録されていれば読み込む
   M3uFile := LoadGroupList;
-  if FileExists(M3uFile) then
+
+  if M3uFile = '' then
   begin
-    LoadCHList(M3ufile);
-    PLexport.Enabled := False;
-    PLexport.Font.Color := clGray;
-  end else if Pos('https://', M3uFile) = 1 then
-  begin
-    M3ufile := LoadOnlinem3u(M3uFile);
-    if M3ufile <> '' then
-    begin
-      LoadCHList(M3ufile);
-      PLexport.Enabled := True;
-      PLexport.Font.Color := clWhite;
-    end;
-  end else begin
-    // 登録されているプレイリストファイルがない
-    if M3uFile <> '' then
-    begin
-      MessageDlg('読み込みエラー', M3uFile + ' がありません.'#13#10'再度TVチャンネルリストファイルを指定して下さい.', mtWarning, [mbOK], 0);
-      ListOpenBtnClick(nil);
-    // プレイリストが登録されていない場合はファイル洗濯ダイアログを開く
-    end else begin
-      MessageDlg('TVチャンネルファイル登録', '最初にTVチャンネルリストファイルを登録して下さい.', mtWarning, [mbOK], 0);
-      ListOpenBtnClick(nil);
-    end;
-    if AbortFlag then
-      Close;
+    MessageDlg('読み込みエラー', M3uFile + ' がありません.'#13#10'再度TVチャンネルリストファイルを指定して下さい.', mtWarning, [mbOK], 0);
+    ListOpenBtnClick(nil);
   end;
+  if AbortFlag then
+    Close;
 end;
 
 // ESCキーが押されたら強制的に終了する
@@ -719,87 +456,40 @@ begin
     CateList.ItemIndex := 0;
 end;
 
-// ネット上からプレイリストを取得する
-function TMainForm.LoadOnlineM3u(aURL: string): string;
-var
-  fn, s: string;
-  gsrc: TStringList;
-  r: TRegExpr;
-begin
-  fn := '';
-  PlainM3u := '';
-  if UTF8Pos('https://', aURL) = 1 then
-  begin
-    // URLがgithubの場合は取得したHTMLからプレイリスト部分だけを抽出する
-    if Pos('https://github.com', aURL) = 1 then
-    begin
-      s := LoadFromHTML(aURL);
-      if Pos('#EXTM3U', s) > 1 then
-      begin
-        r := TRegExpr.Create;
-        try
-          r.Expression :='{"rawLines":\["#EXTM3U.*?\"],"stylingDirectives"';
-          r.InputString := s;
-          if r.Exec then
-          begin
-            s := r.Match[0];                        // マッチした部分
-            UTF8Delete(s, r.MatchLen[0] - 21, 22);  // "],"stylingDirectives"を削除
-            UTF8Delete(s, 1, 14);                   // {"rawLines":["を削除
-            s := UTF8StringReplace(s, '\r', '', [rfReplaceAll]);
-            s := UTF8StringReplace(s, '","', #13#10, [rfReplaceAll]);
-            s := UTF8StringReplace(s, '"]', '', [rfReplaceAll]);
-            s := UTF8StringReplace(s, '\"', '"', [rfReplaceAll]);
-            PlainM3u := s;
-            gsrc := TStringList.Create;
-            try
-              gsrc.Text := s;
-              fn := ExtractFilePath(iNI.FileName) + 'playlist.m3u';
-              gsrc.SaveToFile(fn, TEncoding.UTF8);
-            finally
-              gsrc.Free;
-            end;
-          end;
-        finally
-          r.Free;
-        end;
-      end;
-    end else begin  // HTMLからプレーンテキストを取得
-      fn := GetOnlineList(aURL);
-    end;
-  end;
-  // オンライン上から取得して一時保存したプレイリストファイル名を返す
-  Result := fn;
-end;
-
 // CHグループ変更処理
 procedure TMainForm.GrpSelectSelect(Sender: TObject);
 var
   m3u, fn: string;
+  i: integer;
 begin
   inherited;
 
   URLLabel.Caption := '';
   m3u := GrpList[GrpSelect.ItemIndex];
-  if FileExists(m3u) then
+  if not LoadCHData(m3u) then
   begin
-    LoadCHList(m3u);
-    PLexport.Enabled := False;
-    PLexport.Font.Color := clGray;
-  end else if UTF8Pos('https://', m3u) = 1 then
-  begin
-    fn := LoadOnlinem3u(m3u);
-    if fn <> '' then
-    begin
-      try
-        LoadChList(fn);
-        PLexport.Enabled := True;
-        PLexport.Font.Color := clWhite;
-      except
-        ;
-      end;
-    end;
-  end else
     URLLabel.Caption := 'プレイリストを見つけることが出来ませんでした.';
+    Exit;
+	end else begin
+    if FileExists(m3u) then
+    begin
+      PLexport.Enabled := False;
+      PLexport.Font.Color := clGray;
+    end else begin
+      PLexport.Enabled := True;
+      PLexport.Font.Color := clWhite;
+		end;
+	end;
+  CateList.Items.Clear;
+  if Length(GroupName) > 0 then
+  begin
+    for i := 0 to Length(GroupName) - 1 do
+    begin
+      CateList.Items.Add(GroupName[0]);
+    end;
+    if CateList.Count > 0 then
+      CateList.ItemIndex := 0;
+  end;
 end;
 
 procedure TMainForm.MnuCopyClick(Sender: TObject);
@@ -869,15 +559,6 @@ begin
       EPGsw   := ge.EPGsw.Checked;
       EPGbyPL := ge.IsPlayList.Checked;
       m3u     := LoadGroupList;
-      if FileExists(m3u) then
-        LoadCHList(m3u)
-      else if UTF8Pos('https://', m3u) = 1 then
-      begin
-        m3u := LoadOnlinem3u(m3u);
-        if m3u <> '' then
-          LoadChList(m3u);
-      end else begin
-       end;
       GrpSelect.ItemIndex := i;
       GrpSelectSelect(nil);
     end;

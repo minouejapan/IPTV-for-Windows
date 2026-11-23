@@ -17,9 +17,9 @@
     <VersionInfo>
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="2"/>
-      <MinorVersionNr Value="3"/>
+      <MinorVersionNr Value="4"/>
       <Language Value="0411"/>
-      <StringTable Comments="MITライセンス" FileDescription="IPTV for Windows" InternalName="lazIPTV" LegalCopyright="INOUE, masahiro" LegalTrademarks="M&amp;I Soft" OriginalFilename="lazIPTV.exe" ProductName="lazIPTV" ProductVersion="3"/>
+      <StringTable Comments="MITライセンス" FileDescription="IPTV for Windows" InternalName="lazIPTV" LegalCopyright="INOUE, masahiro" LegalTrademarks="M&amp;I Soft" OriginalFilename="lazIPTV.exe" ProductName="lazIPTV" ProductVersion="2.4"/>
     </VersionInfo>
     <BuildModes>
       <Item Name="Debug" Default="True"/>
@@ -104,6 +104,11 @@
       <Unit>
         <Filename Value="epgunit.pas"/>
         <IsPartOfProject Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="loadm3u.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="LoadM3U"/>
       </Unit>
     </Units>
   </ProjectOptions>

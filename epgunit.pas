@@ -233,10 +233,9 @@ begin
   // IDがなければ処理をスキップ
   if id.PlaneID = '' then
     Exit;
-// IDがEPGリスト内にあるかどうか検索してなければ処理をスキップ
-  if Pos(id.PlaneID, EPGxml) = 0 then
+  // ID/UDがEPGリスト内になければ処理をスキップ
+  if (Pos(id.PlaneID, EPGxml) = 0) or (Pos(id.QuotedUD, EPGxml) = 0) then
     Exit;
-
   dt := PTime;
   //sr := '<channel id="' + id + '">.*?<channel';
   r1 := TRegExpr.Create;
@@ -247,47 +246,44 @@ begin
     // その事により全情報をべた検索するため時間がかかるようになった
     r1.InputString := EPGxml;
     r1.Expression  := '<programme start=.*?channel="' + id.QuotedUD + '">.*?</programme>';
-    if r1.Exec then
+    while r1.Exec do
     begin
-      repeat
-        sn := r1.Match[0];
-        en := sn;
-        tl := sn;
-        sn := ReplaceRegExpr('<programme start="', sn, '');
-              // 20250115000000 を20205/01/15 00:00:00に変換する
-        sn := UTF8Copy(sn, 1, 4) + '/' + UTF8Copy(sn, 5, 2) + '/' + UTF8Copy(sn, 7, 2) + ' '
-              + UTF8Copy(sn, 9, 2) + ':' + UTF8Copy(sn, 11, 2) + ':' + UTF8Copy(sn, 13, 2);
-        st := StrToDateTime(sn);
-
-        en := ReplaceRegExpr('<programme start=".*?stop="', en, '');
-              // 20250115000000 を20205/01/15 00:00:00に変換する
-        en := UTF8Copy(en, 1, 4) + '/' + UTF8Copy(en, 5, 2) + '/' + UTF8Copy(en, 7, 2) + ' '
-              + UTF8Copy(en, 9, 2) + ':' + UTF8Copy(en, 11, 2) + ':' + UTF8Copy(en, 13, 2);
-        et := StrToDateTime(en);
-
-        if (st <= dt) and (et > dt) then // 放映中
+      sn := r1.Match[0];
+      r1.InputString := ReplaceRegExpr(sn, EPGxml, '');
+      en := sn;
+      tl := sn;
+      sn := ReplaceRegExpr('<programme start="', sn, '');
+            // 20250115000000 を20205/01/15 00:00:00に変換する
+      sn := UTF8Copy(sn, 1, 4) + '/' + UTF8Copy(sn, 5, 2) + '/' + UTF8Copy(sn, 7, 2) + ' '
+            + UTF8Copy(sn, 9, 2) + ':' + UTF8Copy(sn, 11, 2) + ':' + UTF8Copy(sn, 13, 2);
+      st := StrToDateTime(sn);
+      en := ReplaceRegExpr('<programme start=".*?stop="', en, '');
+            // 20250115000000 を20205/01/15 00:00:00に変換する
+      en := UTF8Copy(en, 1, 4) + '/' + UTF8Copy(en, 5, 2) + '/' + UTF8Copy(en, 7, 2) + ' '
+            + UTF8Copy(en, 9, 2) + ':' + UTF8Copy(en, 11, 2) + ':' + UTF8Copy(en, 13, 2);
+      et := StrToDateTime(en);
+      if (st <= dt) and (et > dt) then // 放映中
+      begin
+        ttl := '';
+        r2.InputString := tl;
+        r2.Expression  := '<title lang="ja">.*?</title>';
+        if r2.Exec then
         begin
-          ttl := '';
-          r2.InputString := tl;
-          r2.Expression  := '<title lang="ja">.*?</title>';
-          if r2.Exec then
-          begin
-            ttl := r2.Match[0];
-            ttl := ReplaceRegExpr('</title>', ReplaceRegExpr('<title lang="ja">', ttl, ''), '');
-          end;
-          r2.Expression  := '<desc lang="ja">.*?</desc>';
-          if r2.Exec then
-          begin
-            exp := r2.Match[0];
-            exp := ReplaceRegExpr('</desc>', ReplaceRegExpr('<desc lang="ja">', exp, ''), '');
-          end;
-          Result.Title       := Trim(Restore2RealChar(ttl));
-          Result.Description := Restore2RealChar(exp);
-          Result.StartT      := st;
-          Result.EndT        := et;
-          Break;
+          ttl := r2.Match[0];
+          ttl := ReplaceRegExpr('</title>', ReplaceRegExpr('<title lang="ja">', ttl, ''), '');
         end;
-      until not r1.ExecNext;
+        r2.Expression  := '<desc lang="ja">.*?</desc>';
+        if r2.Exec then
+        begin
+          exp := r2.Match[0];
+          exp := ReplaceRegExpr('</desc>', ReplaceRegExpr('<desc lang="ja">', exp, ''), '');
+        end;
+        Result.Title       := Trim(Restore2RealChar(ttl));
+        Result.Description := Restore2RealChar(exp);
+        Result.StartT      := st;
+        Result.EndT        := et;
+        Break;
+      end;
     end;
   finally
     r1.Free;

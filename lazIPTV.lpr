@@ -13,14 +13,14 @@ uses
   athreads,
   {$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, customdrawn, vlcmainunit, geditunit, epgunit,
+  Forms, customdrawn, vlcmainunit, geditunit, epgunit, LoadM3U,
   PasLibVlcPlayer;
 
 {$R *.res}
 
 begin
   RequireDerivedFormResource:=True;
-			Application.Scaled:=True;
+	Application.Scaled:=True;
   Application.Initialize;
   Application.CreateForm(TMainForm, MainForm);
   Application.Run;
