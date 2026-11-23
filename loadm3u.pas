@@ -213,14 +213,14 @@ begin
 	end;
 end;
 
-function GNExists(GN: string): integer;
+function GNExists(GName: string): integer;
 var
   i: integer;
 begin
   Result := -1;
   for i := 0 to Length(GroupName) - 1 do
   begin
-    if GroupName[i] = GN then
+    if GroupName[i] = GName then
     begin
       Result := i;
       Break;

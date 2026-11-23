@@ -2,6 +2,7 @@
 
   lazIPTV
 
+  ver2.41 2026/11/24  グループ名読み込み処理の不具合を修正した
   ver2.4  2026/11/23  プレイリスト読み込み処理を書き換えてリファラ指定にも対応するようにした
   ver2.31 2026/08/02  プレイリストにグループIDがない場合にCH名に"group-title=なし"が付加される不具合を修正した
   ver2.3  2026/07/30  チャンネル識別IDの置換処理を廃止した
@@ -485,7 +486,7 @@ begin
   begin
     for i := 0 to Length(GroupName) - 1 do
     begin
-      CateList.Items.Add(GroupName[0]);
+      CateList.Items.Add(GroupName[i]);
     end;
     if CateList.Count > 0 then
       CateList.ItemIndex := 0;
