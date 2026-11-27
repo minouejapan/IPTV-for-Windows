@@ -1,4 +1,5 @@
 //
+// 2026/11/27 検索が無限ループになる場合があった不具合を修正した
 // 2026/07/27 EPGファイルがgzファイルの場合の処理を追加
 //  EPGリスト処理
 //
@@ -208,8 +209,7 @@ end;
 
 function GetEPGGuide(aID: string; PTime: TDateTime): TVGuide;
 var
-  {sr, guide,}
-  sn, en, tl, ttl, exp: string;
+  sn, en, tl, ttl, exp, epgtmp: string;
   id: TEPGID;
   dt, st, et: TDateTime;
   r1, r2: TRegExpr;
@@ -234,8 +234,9 @@ begin
   if id.PlaneID = '' then
     Exit;
   // ID/UDがEPGリスト内になければ処理をスキップ
-  if (Pos(id.PlaneID, EPGxml) = 0) or (Pos(id.QuotedUD, EPGxml) = 0) then
+  if (UTF8Pos(id.PlaneID, EPGxml) = 0) or (UTF8Pos(id.QuotedUD, EPGxml) = 0) then
     Exit;
+  epgtmp := EPGxml;
   dt := PTime;
   //sr := '<channel id="' + id + '">.*?<channel';
   r1 := TRegExpr.Create;
@@ -244,12 +245,14 @@ begin
     // 各チャンネルの番組情報が<channel id=????></channel>で括られていない場合が
     // あるため、該当チャンネルID情報だけを抜き出す処理をスキップさせた
     // その事により全情報をべた検索するため時間がかかるようになった
-    r1.InputString := EPGxml;
+    r1.InputString := epgtmp;
     r1.Expression  := '<programme start=.*?channel="' + id.QuotedUD + '">.*?</programme>';
     while r1.Exec do
     begin
       sn := r1.Match[0];
-      r1.InputString := ReplaceRegExpr(sn, EPGxml, '');
+      //r1.InputString := ReplaceRegExpr(sn, EPGxml, '');
+      UTF8Delete(epgtmp, 1, r1.MatchPos[0] + r1.MatchLen[0]);
+      r1.InputString := epgtmp;
       en := sn;
       tl := sn;
       sn := ReplaceRegExpr('<programme start="', sn, '');

@@ -1,4 +1,5 @@
 //
+// 2-26/11/27 EPGリストを検索するためのチャンネルIDを追加した(忘れていた)
 // PlayList読み込み
 //
 unit LoadM3U;
@@ -14,6 +15,7 @@ uses
 type
   TCH_Data = record
     GroupID: integer;
+    ChID,
     Name,
     URL,
     Referrer: string;
@@ -292,7 +294,9 @@ begin
 				end;
         CHData[cn - 1].GroupID := p;
         CHData[cn - 1].Name    := s;
-				s := FindRegExpr(line, 'http.*?m3u8');
+  			s := FindRegExpr(line, 'tvg-id="', '"');
+        CHData[cn - 1].ChID    := s;
+ 				s := FindRegExpr(line, 'http.*?m3u8');
         if s = '' then
         begin
           s := FindRegExpr(line, 'http.*? ');

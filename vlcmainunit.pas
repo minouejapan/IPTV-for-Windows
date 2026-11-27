@@ -2,6 +2,7 @@
 
   lazIPTV
 
+  ver2.5  2026/11/27  EPGリストを取得出来ずにアクセス違反が発生していた不具合を修正した
   ver2.41 2026/11/24  グループ名読み込み処理の不具合を修正した
   ver2.4  2026/11/23  プレイリスト読み込み処理を書き換えてリファラ指定にも対応するようにした
   ver2.31 2026/08/02  プレイリストにグループIDがない場合にCH名に"group-title=なし"が付加される不具合を修正した
@@ -63,6 +64,7 @@ type
     PlayList: string;
   end;
   TCHInfo = record
+    ChID,             // チャンネルID
     Name,             // チャンネル名称
     strmURL,          // ストリームURL
     Referrer: string; // リファラ(参照元)URL
@@ -146,7 +148,7 @@ var
 implementation
 
 uses
-  GEditUnit, EPGunit, tvgunit;
+  GEditUnit, EPGunit;
 
 {$R *.lfm}
 
@@ -207,7 +209,7 @@ begin
     begin
       if EPGbyPL and (PL_EPG <> '') then
         EPGurl :=  PL_EPG;
-      TVg := GetEPGGuide(Chid[i], Now);
+      TVg := GetEPGGuide(CHInfo[i].ChID, Now);
       // EPGデータを取得出来なかった
       if TVg.Title = '' then
       begin
@@ -263,6 +265,7 @@ begin
       ChList.Items.Add(CHData[i].Name);
       Inc(cn);
       SetLength(CHInfo, cn);
+      CHInfo[cn - 1].ChID     := CHData[i].ChID;
       CHInfo[cn - 1].Name     := CHData[i].Name;
       CHInfo[cn - 1].strmURL  := CHData[i].URL;
       CHInfo[cn - 1].Referrer := CHData[i].Referrer;
@@ -419,8 +422,7 @@ begin
 end;
 
 // マウスカーソルの位置によってチャンネル選択メニューを開閉させる
-procedure TMainForm.FormMouseMove(Sender: TObject; Shift: TShiftState; X,
-  Y: Integer);
+procedure TMainForm.FormMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
 begin
   if MenuOpen then
     Exit;
